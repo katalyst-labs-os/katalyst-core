@@ -1,0 +1,9 @@
+.logs/
+poetry.lock
+cache/
+/*.stl
+/*.step
+.notes/
+katalyst_backend.egg-info/
+.env
+__pycache__/

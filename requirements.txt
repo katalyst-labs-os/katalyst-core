@@ -1,0 +1,17 @@
+python-dotenv
+openai
+loguru
+vtk
+numpy==1.26.4
+cadquery==2.4.0
+airfoils
+git+https://github.com/meadiode/cq_gears.git@main
+sentence-transformers==3.0.1
+pymupdf
+tiktoken
+pandas
+lancedb==0.9.0
+opencv-python==4.10.0.84
+open_clip_torch==2.26.1
+langchain-community==0.2.7
+beautifulsoup4
