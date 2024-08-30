@@ -4,6 +4,6 @@ cache/
 /*.stl
 /*.step
 .notes/
-katalyst_backend.egg-info/
 .env
 __pycache__/
+katalyst_core.egg-info/
