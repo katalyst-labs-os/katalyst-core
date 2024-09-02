@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     prompt = input("Enter a prompt for the agent: ")
     agent = Agent.initialize(prompt)
-    agent.generate_initial(precision=2)
+    agent.generate_initial(precision=1)
     while True:
         message = input("Enter a message for the agent: ")
         agent.generate_iteration(message)

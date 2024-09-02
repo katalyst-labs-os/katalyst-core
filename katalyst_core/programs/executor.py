@@ -181,7 +181,7 @@ def fix_and_replace_filename(code: str, by: str) -> str:
 
         modified_lines.append(line)
 
-    # If no replacement was done, check for .exportStl("<myname>.stl")
+    # If no replacement was done, check for export_stl("<myname>.stl")
     if not replaced:
         new_modified_lines = []
         for line in modified_lines:
@@ -231,7 +231,17 @@ def fix_and_replace_filename(code: str, by: str) -> str:
 
         return "\n".join(new_modified_lines)
 
-    return "\n".join(modified_lines)
+    code = "\n".join(modified_lines)
+
+    pattern = r'(\w+)\.export_stl\(([^)]+)\)'
+    
+    def replacer(match):
+        obj = match.group(1)
+        filename = match.group(2)
+        return f'export_stl({obj}, {filename})'
+
+    modified_code = re.sub(pattern, replacer, code)
+    return modified_code
 
 def replace_export_function(script, new_extension):
     if not new_extension.startswith("."):
