@@ -205,10 +205,10 @@ class GenerationStepComment(GenerationStep):
     model: str
 
     def execute(
-        self, pipeline_id: int, prompt: str, previous: list[GenerationResult]
+        self, pipeline_id: int, prompt: str, previous: list[GenerationResult], llm_api_key: Optional[str] = None
     ) -> tuple[list[GenerationResult], list[GenerationResult]]:
         def _comment(result: GenerationResult):
-            maybe_comment = comment_result(prompt, result, self.model)
+            maybe_comment = comment_result(prompt, result, self.model, llm_api_key)
             if maybe_comment is None:
                 return None
             result.comment = maybe_comment[0]

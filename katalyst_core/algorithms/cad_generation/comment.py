@@ -38,16 +38,16 @@ def commented_results_to_examples(
 
 
 def comment_result(
-    initial_prompt: str, result: GenerationResult, model: str
+    initial_prompt: str, result: GenerationResult, model: str, llm_api_key: Optional[str] = None
 ) -> Optional[tuple[str, tuple[str, int]]]:
     stl_path = program_stl_path(result.program_id)
-    description = describe_stl(stl_path, model)
+    description = describe_stl(stl_path, model, llm_api_key)
     if description is None:
         description = "No description available"
 
     visual_critique, rating = (None, 0)
     if result.visual_critique is None:
-        maybe = compare_stl_to_prompt(stl_path, initial_prompt, model)
+        maybe = compare_stl_to_prompt(stl_path, initial_prompt, model, llm_api_key)
         if maybe is not None:
             visual_critique, rating = maybe
     else:
@@ -106,7 +106,7 @@ Answer in the following format:
 
 WE DO NOT CARE ABOUT: benchmarks, materials, exports. Don't critique these aspects.
 """
-    client = init_client()
+    client = init_client(llm_api_key)
 
     try:
         response = client.chat.completions.create(

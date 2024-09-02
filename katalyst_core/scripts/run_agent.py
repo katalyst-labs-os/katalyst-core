@@ -10,12 +10,12 @@ if __name__ == "__main__":
         colorize=True,
         level="TRACE",
         format="<green>{time:HH:mm:ss Z}</green>|<blue>{level}</blue>| <level>{message}</level>",
-        filter="katalyst",
+        filter="katalyst_core",
     )
 
-    prompt = input("Enter a prompt for the agent")
+    prompt = input("Enter a prompt for the agent: ")
     agent = Agent.initialize(prompt)
-    agent.generate_initial(precision=6)
+    agent.generate_initial(precision=2)
     while True:
-        message = input("Enter a message for the agent")
+        message = input("Enter a message for the agent: ")
         agent.generate_iteration(message)

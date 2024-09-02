@@ -40,11 +40,11 @@ def _stl_to_image_docs(stl_path):
     return docs
 
 
-def describe_stl(stl_path, model) -> Optional[str]:
+def describe_stl(stl_path, model, llm_api_key: Optional[str] = None) -> Optional[str]:
     try:
         docs = _stl_to_image_docs(stl_path)
 
-        client = init_client()
+        client = init_client(llm_api_key)
 
         docs = [
             *docs,
