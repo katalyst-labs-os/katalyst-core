@@ -38,13 +38,7 @@ def code_run_fix_loop(
 
         user_message = error_message(output)
         if iterations > 0 and iterations < max_iterations - 1:
-            if "No pending wires present" in output:
-                output += "\n\nIf the error is `No pending wires present`, it is likely not trival: all you can do is to remove the function call causing the error and not attempt to do in any other way what you meant to do with that call."
-            if "fillet" in output or "chamfer" in output:
-                output += '\n\nIf the error is regarding fillet and chamfers, make sure you selected some edges with .edges(... (e.g "|Z")) before .fillet(<radius>) or .chamfer(<radius>). Notably, you can\'t pass an edge list to .chamfer() or .fillet(), it only takes a radius. You always need to select the edges with .edges. \n```\n edges(selector: Optional[Union[str, Selector]] = None, tag: Optional[str] = None)→ T\n Select the edges of objects on the stack, optionally filtering the selection. If there are multiple objects on the stack, the edges of all objects are collected and a list of all the distinct edges is returned.\nFilters must provide a single method that filters objects: filter(objectList: Sequence[Shape])→ list[Shape]\n```'
-            if "one solid on the stack to union" in output:
-                output += "\n\nIf the error is ` Workplane object must have at least one solid on the stack to union!`, make sure you don't call .union on a workplane you just selected, but instead on a workplane with an existing object within. For instance if you created object A on a workplane and object B on another workplane, don't do `result = cq.Workplane(...).union(A).union(B)` but instead `result = A.union(B)`"
-
+            # TODO: insert hard-coded build123d specific tips here like we did before with cadquery
             user_message = {"role": "user", "content": f"{output}\n\nTry again:"}
         elif iterations == max_iterations - 1:
             user_message = {

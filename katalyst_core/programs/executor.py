@@ -26,9 +26,15 @@ from katalyst_core.programs.storage import (
 from katalyst_core.programs.thumbnail import program_to_thumbnail
 
 preamble = """
-import cadquery as cq
-import cadquery
-from cq_gears import *
+from build123d import *
+import build123d as bd
+from bd_warehouse.thread import *
+from bd_warehouse.pipe import *
+from bd_warehouse.flange import *
+from bd_warehouse.bearing import *
+from bd_warehouse.fastener import *
+from bd_warehouse.gear import *
+from bd_warehouse.open_builds import *
 import math
 import numpy as np
 import random
@@ -64,7 +70,7 @@ def execute(
         # logger.trace(f"Code after applying params: \n{code}")
 
     if export_format != "stl":
-        code = replace_export_stl(code, export_format)
+        code = replace_export_function(code, export_format)
         # logger.trace(f"Code after replacing exportStl: \n{code}")
 
     temp_script_path = program_script_path(program_id) + ".tmp"
@@ -142,9 +148,9 @@ def execute_first_time(script: str) -> tuple[Optional[str], str, bool]:
 
 
 def set_tolerance(code: str, tolerance=5) -> str:
-    return code.replace(
-        ".exportSTL(filename)", f".exportSTL(filename, tolerance={tolerance})"
-    )
+    pattern = r"(export_stl\(\s*[^,]+,\s*[^)]+)(\))"
+    replacement = rf"\1, tolerance={tolerance}\2"
+    return re.sub(pattern, replacement, code)
 
 
 def fix_and_replace_filename(code: str, by: str) -> str:
@@ -170,7 +176,7 @@ def fix_and_replace_filename(code: str, by: str) -> str:
                     line = f"filename = {modified_value_part}"
                     replaced = True
 
-        if var_name is not None and replaced and ".exportStl(" in stripped_line:
+        if var_name is not None and replaced and "export_stl(" in stripped_line:
             line = line.replace(var_name, "filename")
 
         modified_lines.append(line)
@@ -180,7 +186,7 @@ def fix_and_replace_filename(code: str, by: str) -> str:
         new_modified_lines = []
         for line in modified_lines:
             stripped_line = line.strip()
-            if ".exportStl(" in stripped_line:
+            if "export_stl(" in stripped_line:
                 start_quote = (
                     stripped_line.find('"')
                     if '"' in stripped_line
@@ -207,7 +213,7 @@ def fix_and_replace_filename(code: str, by: str) -> str:
         if replaced:
             return "\n".join(new_modified_lines)
 
-    # If no .exportStl() case found, look for the last assignment
+    # If no export_stl() case found, look for the last assignment
     if not replaced:
         new_modified_lines = modified_lines[:]
         for i in range(len(new_modified_lines) - 1, -1, -1):
@@ -221,38 +227,44 @@ def fix_and_replace_filename(code: str, by: str) -> str:
 
         if last_assignment:
             new_modified_lines.append(f'filename = "{by}"')
-            new_modified_lines.append(f"{last_assignment}.val().exportStl(filename)")
+            new_modified_lines.append(f"export_stl({last_assignment}, filename)")
 
         return "\n".join(new_modified_lines)
 
     return "\n".join(modified_lines)
 
-
-def replace_export_stl(script, new_extension):
-    # Ensure the new extension starts with a dot
+def replace_export_function(script, new_extension):
     if not new_extension.startswith("."):
         new_extension = "." + new_extension
 
-    # Regular expression to find the exportStl line
-    export_stl_pattern = re.compile(r"(\w+)\.val\(\)\.exportStl\((\s*\w+\s*)")
+    export_functions = {
+        ".stl": "export_stl",
+        ".brep": "export_brep",
+        ".step": "export_step",
+        ".gltf": "export_gltf",
+        ".3mf": "Mesher",
+    }
 
-    # Split the script into lines
+    func_name = export_functions.get(new_extension)
+    if not func_name:
+        return script
+
     lines = script.split("\n")
 
-    # Iterate through each line and replace the matched pattern
     for i, line in enumerate(lines):
-        match = export_stl_pattern.search(line)
-        if match:
-            # Construct the replacement line
-            new_line = f"cq.exporters.export({match.group(1)}, {match.group(2)})"
-            # Replace the line in the list
-            lines[i] = new_line
+        if new_extension == ".3mf":
+            mesher_pattern = re.compile(r"export_stl\((\w+),\s*['\"](.+?)\.stl['\"]\)")
+            match = mesher_pattern.search(line)
+            if match:
+                new_line = f"{func_name}().add_shape({match.group(1)})\n{func_name}().write('{match.group(2)}{new_extension}')"
+                lines[i] = new_line
+        else:
+            pattern = re.compile(rf"export_stl\((\w+),\s*['\"](.+?)\.stl['\"]\)")
+            match = pattern.search(line)
+            if match:
+                new_line = f"{func_name}({match.group(1)}, '{match.group(2)}{new_extension}')"
+                lines[i] = new_line
 
-    # Join the lines back into a single script
     script = "\n".join(lines)
-
-    # Regular expression to find the filename line and change the extension
-    filename_pattern = re.compile(r'(filename\s*=\s*[\'"])(.*?)(\.stl)([\'"])')
-    script = filename_pattern.sub(rf"\1\2{new_extension}\4", script)
 
     return script

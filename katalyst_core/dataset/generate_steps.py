@@ -101,7 +101,7 @@ code:
 ```
 ---
 
-Above is an example pair we give to LLMs for few shot prompting to generate cadquery code from a text description.
+Above is an example pair we give to LLMs for few shot prompting to generate build123d code from a text description.
 We have a new feature for continuous text-based user feedback and iteration, where the user might ask for any change or edit.
 By using what's inside the code of this example already, construct intermediary examples of the form:
 - code before
@@ -116,88 +116,74 @@ answer in the following format:
 <step>
 <code-before>
 ```
-some code
+# Starting with an empty script
 ```
 </code-before>
 <request>
-precise description of the edit asked for
+Create an empty Build123d model with a default workplane.
 </request>
 <edits>
-some substep of the edit
+Initialize a model with a default workplane in Build123d.
 ```
-# some description of where in the code we are
-some changed code snippet
-```
-more substeps if needed
-</edits>
-</step>
-... more steps
-</steps>
+from build123d import *
 
-For example:
-
-<steps>
-<step>
-<code-before>
-```
-result = cq.Workplane("XY")
-```
-</code-before>
-<request>
-Start with a blank CadQuery workplane
-</request>
-<edits>
-Initializing a workplane
-```
-result = cq.Workplane("XY")
+with BuildPart() as part:
+    pass
 ```
 </edits>
 </step>
+
 <step>
 <code-before>
 ```
-result = cq.Workplane("XY")
+from build123d import *
+
+with BuildPart() as part:
+    pass
 ```
 </code-before>
 <request>
-Create a box with specific dimensions
+Create a box with specific dimensions on the default workplane.
 </request>
 <edits>
-Define dimensions as variables
+Define dimensions and create a box.
 ```
 length = 80.0
 height = 60.0
 thickness = 10.0
-result = cq.Workplane("XY").box(length, height, thickness)
+
+with BuildPart() as part:
+    Box(length, height, thickness)
 ```
 </edits>
 </step>
+
 <step>
 <code-before>
 ```
 length = 80.0
 height = 60.0
 thickness = 10.0
-result = cq.Workplane("XY").box(length, height, thickness)
+
+with BuildPart() as part:
+    Box(length, height, thickness)
 ```
 </code-before>
 <request>
-Add a hole in the center of the top face
+Add a hole in the center of the top face of the box.
 </request>
 <edits>
-Define the hole diameter as a variable and add the hole
+Add a hole feature centered on the top face of the box.
 ```
 center_hole_dia = 22.0
-result = (
-    cq.Workplane("XY")
-    .box(length, height, thickness)
-    .faces(">Z")
-    .workplane()
-    .hole(center_hole_dia)
-)
+
+with BuildPart() as part:
+    Box(length, height, thickness)
+    Cylinder(radius=center_hole_dia/2, height=thickness, mode=Mode.SUBTRACT).translate((0, 0, thickness/2))
 ```
 </edits>
 </step>
+
 <step>
 <code-before>
 ```
@@ -205,28 +191,21 @@ length = 80.0
 height = 60.0
 thickness = 10.0
 center_hole_dia = 22.0
-result = (
-    cq.Workplane("XY")
-    .box(length, height, thickness)
-    .faces(">Z")
-    .workplane()
-    .hole(center_hole_dia)
-)
+
+with BuildPart() as part:
+    Box(length, height, thickness)
+    Cylinder(radius=center_hole_dia/2, height=thickness, mode=Mode.SUBTRACT).translate((0, 0, thickness/2))
 ```
 </code-before>
 <request>
-Verify and ensure the hole is centered
+Ensure that the hole is precisely centered.
 </request>
 <edits>
-Ensure the hole is centered by confirming workplane alignment and hole placement
+Adjust the cylinder's translation to explicitly center it in both X and Y directions.
 ```
-result = (
-    cq.Workplane("XY")
-    .box(length, height, thickness)
-    .faces(">Z")
-    .workplane(centerOption="CenterOfMass")
-    .hole(center_hole_dia)
-)
+with BuildPart() as part:
+    Box(length, height, thickness)
+    Cylinder(radius=center_hole_dia/2, height=thickness, mode=Mode.SUBTRACT).translate((length/2, height/2, thickness/2))
 ```
 </edits>
 </step>

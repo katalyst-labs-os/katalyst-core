@@ -9,24 +9,6 @@ def error_message(output: str) -> dict:
 
 The code execution failed.
 
-Advices:
-
-1. If you get:
-```
-    foo.exportStl(filename)
-    ^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Workplane' object has no attribute 'exportStl'. Did you mean: 'exportSvg'?
-```
-Then you forgot .val() before .exportStl(). So you need to rewrite it to foo.val().exportStl(filename)
-
-2. If you get:
-```
-    foo = cq.Workplane("XY").baz(...)
-          ^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Workplane' object has no attribute 'baz'.
-```
-Then .baz is not a function of the Workplane and what you want to create probably is not created from the workplane itself. Refer to the examples given way above to find out how to do it.
-
 Answer in the following format without any text before or after:
 
 {_fix_format_guidelines()}
@@ -55,7 +37,7 @@ def iteration_messages(
         "content": f"""
 # Your task:
 
-Edit a programatic CAD model by modifying Python code based on Cadquery.
+Edit a programatic CAD model by modifying Python code using build123d.
 
 {_code_guidelines()}
 
@@ -63,54 +45,7 @@ Edit a programatic CAD model by modifying Python code based on Cadquery.
 
 {examples}
 
-# Format examples:
-
-Response to an initial user request such as "Create the following model: a helix with a radius of 5mm and a pitch of 5mm, turns of 4, and a height of 20mm.":
-
-<example>
-    <reasoning>
-        1. Make a list of all the visual characteristics you would expect such object to have
-        2. Make a list of all the small parts you will have in your model
-        3. Write for each part:
-            1. their position relative to all the other elements
-            2. their shapes
-            3. their sizes
-            4. their direction
-            5. functions and techniques from examples that will help you in the form <example name> <code abstract>
-            6. how you're going to contruct them geometrically
-    </reasoning>
-
-    <code>
-# <parameters>
-pitch = 5
-height = 20
-turns = 4
-radius = 5
-# </parameters>
-
-# Define the helix path using a proper callable function
-def helix(t):
-    return (
-        radius * math.cos(t),
-        radius * math.sin(t),
-        pitch * t / (2 * math.pi)
-    )
-
-# Create a helix path
-path = (cq.Workplane("XY")
-        .modelCurve(lambda t: helix(2 * math.pi * turns * t), N=100))
-
-# Define profile to be swept along the path
-profile = cq.Workplane("XZ").circle(0.5)
-
-# Perform the sweep
-shape = profile.sweep(path, isFrenet=True)
-
-# Export to STL
-filename = 'spiral_sweep.stl'
-shape.val().exportStl(filename)
-    </code>
-</example>
+{_format_example()}
 
 {_follow_up_format_guidelines()}
 
@@ -165,54 +100,7 @@ Create a programatic CAD model by writing Python code based on Cadquery. You may
 
 {_code_guidelines()}
 
-# Format examples:
-
-Response to an initial user request such as "Create the following model: a helix with a radius of 5mm and a pitch of 5mm, turns of 4, and a height of 20mm.":
-
-<example>
-    <reasoning>
-        1. Make a list of all the visual characteristics you would expect such object to have
-        2. Make a list of all the small parts you will have in your model
-        3. Write for each part:
-            1. their position relative to all the other elements
-            2. their shapes
-            3. their sizes
-            4. their direction
-            5. functions and techniques from examples that will help you in the form <example name> <code abstract>
-            6. how you're going to contruct them geometrically
-    </reasoning>
-
-    <code>
-# <parameters>
-pitch = 5
-height = 20
-turns = 4
-radius = 5
-# </parameters>
-
-# Define the helix path using a proper callable function
-def helix(t):
-    return (
-        radius * math.cos(t),
-        radius * math.sin(t),
-        pitch * t / (2 * math.pi)
-    )
-
-# Create a helix path
-path = (cq.Workplane("XY")
-        .modelCurve(lambda t: helix(2 * math.pi * turns * t), N=100))
-
-# Define profile to be swept along the path
-profile = cq.Workplane("XZ").circle(0.5)
-
-# Perform the sweep
-shape = profile.sweep(path, isFrenet=True)
-
-# Export to STL
-filename = 'spiral_sweep.stl'
-shape.val().exportStl(filename)
-    </code>
-</example>
+{_format_example()}
 
 {_code_important_final_guidelines()}
 
@@ -243,54 +131,7 @@ Some examples above may showcase exactly what the user wants. Make sure to read 
 
 {_code_guidelines()}
 
-# Format examples:
-
-Response to an initial user request such as "Create the following model: a helix with a radius of 5mm and a pitch of 5mm, turns of 4, and a height of 20mm.":
-
-<example>
-    <reasoning>
-        1. Make a list of all the visual characteristics you would expect such object to have
-        2. Make a list of all the small parts you will have in your model
-        3. Write for each part:
-            1. their position relative to all the other elements
-            2. their shapes
-            3. their sizes
-            4. their direction
-            5. functions and techniques from examples that will help you in the form <example name> <code abstract>
-            6. how you're going to contruct them geometrically
-    </reasoning>
-
-    <code>
-# <parameters>
-pitch = 5
-height = 20
-turns = 4
-radius = 5
-# </parameters>
-
-# Define the helix path using a proper callable function
-def helix(t):
-    return (
-        radius * math.cos(t),
-        radius * math.sin(t),
-        pitch * t / (2 * math.pi)
-    )
-
-# Create a helix path
-path = (cq.Workplane("XY")
-        .modelCurve(lambda t: helix(2 * math.pi * turns * t), N=100))
-
-# Define profile to be swept along the path
-profile = cq.Workplane("XZ").circle(0.5)
-
-# Perform the sweep
-shape = profile.sweep(path, isFrenet=True)
-
-# Export to STL
-filename = 'spiral_sweep.stl'
-shape.val().exportStl(filename)
-    </code>
-</example>
+{_format_example()}
 
 {_code_important_final_guidelines()}
 
@@ -356,7 +197,7 @@ your fixed code
 
 def _follow_up_format_guidelines():
     return """
-Example response to a user follow up such as "Now add a second helix next to it which is greater.":
+Example response to a user follow up (here in cadquery, not build123d, but please do it in build123d) such as "Now add a second helix next to it which is greater.":
 
 <example>
     <reasoning>
@@ -401,5 +242,48 @@ shape = helix1.union(helix2)
 filename = 'spiral_sweep.stl'
 shape.val().exportStl(filename)
     <code>
+</example>
+"""
+
+
+def _format_example() -> str:
+    return """
+# Format example:
+
+Response to an initial user request such as "Create the following model: A Plate with slots in it. Suitable for sliding a hatch. It has a length of 80mm, a width of 60mm, and a thickness of 10mm.":
+
+<example>
+    <reasoning>
+        1. Make a list of all the visual characteristics you would expect such object to have
+        2. Make a list of all the small parts you will have in your model
+        3. Write for each part:
+            1. their position relative to all the other elements
+            2. their shapes
+            3. their sizes
+            4. their direction
+            5. functions and techniques from examples that will help you in the form <example name> <code abstract>
+            6. how you're going to contruct them geometrically
+    </reasoning>
+
+    <code>
+# <parameters>
+length = 80.0
+width = 60.0
+thickness = 10.0
+# </parameters>
+
+with BuildPart() as ex35:
+    Box(length, length, thickness)
+    topf = ex35.faces().sort_by(Axis.Z)[-1]
+    with BuildSketch(topf) as ex35_sk:
+        SlotCenterToCenter(width / 2, 10)
+        with BuildLine(mode=Mode.PRIVATE) as ex35_ln:
+            RadiusArc((-width / 2, 0), (0, width / 2), radius=width / 2)
+        SlotArc(arc=ex35_ln.edges()[0], height=thickness, rotation=0)
+        with BuildLine(mode=Mode.PRIVATE) as ex35_ln2:
+            RadiusArc((0, -width / 2), (width / 2, 0), radius=-width / 2)
+        SlotArc(arc=ex35_ln2.edges()[0], height=thickness, rotation=0)
+    extrude(amount=-thickness, mode=Mode.SUBTRACT)
+    </code>
 </example>
 """

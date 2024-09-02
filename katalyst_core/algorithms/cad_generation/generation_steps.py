@@ -37,7 +37,6 @@ class GenerationStepParallel(GenerationStep):
         previous: list[GenerationResult],
         llm_api_key: Optional[str] = None,
     ) -> tuple[list[GenerationResult], list[GenerationResult]]:
-        # execute steps in parallel then concatenate results and discarded
         results = []
         discarded = []
         with ThreadPoolExecutor() as executor:

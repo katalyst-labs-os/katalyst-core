@@ -99,7 +99,7 @@ Answer in the following format:
     Should be of the form
 
     < code or reasoning excerpt >
-    < actionable change described in high details >
+    < actionable change described with high details >
 
     Repeated for each change that should be done to improve the realism, coherence, shape of the solution.
 </final-summary>
