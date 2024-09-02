@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+from loguru import logger
 
 
 def activate_virtual_framebuffer():
@@ -58,7 +59,11 @@ def render(
         renWin.SetAlphaBitPlanes(1)
 
     for filename, position, color in zip(filenames, positions, colors):
-        polydata = loadStl(filename)
+        try:
+            polydata = loadStl(filename)
+        except Exception as e:
+            logger.error(f"Error loading STL file {filename}: {e}")
+            raise e
         actor = polyDataToActor(polydata, color)
         actor.SetPosition(*position)
         # ren.SetLayer(1)
@@ -139,6 +144,9 @@ def render(
 
 def loadStl(fname):
     """Load the given STL file, and return a vtkPolyData object for it."""
+    if not os.path.exists(fname):
+        raise FileNotFoundError(f"File {fname} not found")
+
     reader = vtk.vtkSTLReader()
     reader.SetFileName(fname)
     reader.Update()
