@@ -146,10 +146,14 @@ def execute_first_time(script: str) -> tuple[Optional[str], str, bool]:
 
     return program_id, output, True
 
-
 def set_tolerance(code: str, tolerance=5) -> str:
+    if ", tolerance=" in code:
+        pattern = r'(.*tolerance=)(\d+(\.\d+)?)(.*)'
+        replacement = r'\g<1>{}\g<4>'.format(tolerance)
+        return re.sub(pattern, replacement, code, flags=re.DOTALL)
+    
     pattern = r"(export_stl\(\s*[^,]+,\s*[^)]+)(\))"
-    replacement = rf"\1, tolerance={tolerance}\2"
+    replacement = r"\g<1>, tolerance={}\g<2>".format(tolerance)
     return re.sub(pattern, replacement, code)
 
 
