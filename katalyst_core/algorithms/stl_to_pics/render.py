@@ -71,19 +71,19 @@ def render(
 
     light = vtk.vtkLight()
     light.SetFocalPoint(0, 0, 0)
-    light.SetPosition(1, 1, 2)
+    light.SetPosition(-1, -1, 2)
     light.SetIntensity(0.5)
     ren.AddLight(light)
 
     light2 = vtk.vtkLight()
     light2.SetFocalPoint(0, 0, 0)
-    light2.SetPosition(-1, 1, 2)
+    light2.SetPosition(1, -1, 2)
     light2.SetIntensity(0.5)
     ren.AddLight(light2)
 
     light3 = vtk.vtkLight()
     light3.SetFocalPoint(0, 0, 0)
-    light3.SetPosition(0.5, 0.5, 0)
+    light3.SetPosition(-0.5, -0.5, 0)
     light3.SetIntensity(0.5)
     ren.AddLight(light3)
 

@@ -14,7 +14,7 @@ def program_to_thumbnail(program_id: ProgramId) -> Optional[str]:
             [(0, 0, 0)],
             [(0.97, 0.94, 1.0)],
             [
-                ((0, 0, 1), (0.7, 0.7, 0.7), "thumbnail"),
+                ((0, 0, 1), (-0.7, -0.7, 0.7), "thumbnail"),
             ],
             thumbnail_path,
             prefix="",

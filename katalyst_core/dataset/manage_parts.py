@@ -3,7 +3,7 @@ from typing import Iterator, Optional
 import pandas as pd
 from katalyst_core.dataset.generate_steps import dataset_part_to_steps
 from katalyst_core.dataset.part import DatasetPart
-
+import math
 
 DATASET_PATH = "storage/dataset/dataset.csv"
 DATASET_STEPS_PATH = "storage/dataset/steps.csv"
@@ -22,6 +22,7 @@ def dataframe_to_dataset_part(row: pd.Series) -> DatasetPart:
     files = []
     if isinstance(row["files"], str) and row["files"]:
         files = row["files"].split(";")
+
     return DatasetPart(
         row["id"],
         row["name"],
@@ -31,6 +32,7 @@ def dataframe_to_dataset_part(row: pd.Series) -> DatasetPart:
         files,
         row["author"],
         row["created_at"],
+        None if math.isnan(float(row["program_id"])) else int(row["program_id"]),
     )
 
 
