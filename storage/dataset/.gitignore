@@ -3,3 +3,4 @@
 *.zip
 !.gitignore
 !files/
+multimodal_vector_db/dataset.lance/

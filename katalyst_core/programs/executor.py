@@ -124,6 +124,7 @@ def execute(
 
 def execute_first_time(script: str) -> tuple[Optional[str], str, bool]:
     program_id = new_program_id()
+    # logger.trace(f"Initial script:\n{script}")
 
     ensure_dir_exists(program_dir_path(program_id))
 
