@@ -5,6 +5,7 @@ from katalyst_core.dataset.generate_steps import dataset_part_to_steps
 from katalyst_core.dataset.part import DatasetPart
 import math
 
+DATASET_DIR_PATH = "storage/dataset/"
 DATASET_PATH = "storage/dataset/dataset.csv"
 DATASET_STEPS_PATH = "storage/dataset/steps.csv"
 FILES_PATH = "storage/dataset/files/"
@@ -70,6 +71,17 @@ def add_part(part: DatasetPart):
 def delete_part(part_id: int):
     df = pd.read_csv(DATASET_PATH)
     df = df[df["id"] != part_id]
+    df.to_csv(DATASET_PATH, index=False)
+
+
+def edit_part(part_id: int, new_part: DatasetPart):
+    df = pd.read_csv(DATASET_PATH)
+    df = df[df["id"] != part_id]
+    new_part_dict = vars(new_part)
+    new_part_dict["files"] = ";".join(new_part.files)
+    new_part_dict["id"] = part_id
+    new_row = pd.DataFrame([new_part_dict])
+    df = pd.concat([df, new_row], ignore_index=True)
     df.to_csv(DATASET_PATH, index=False)
 
 
