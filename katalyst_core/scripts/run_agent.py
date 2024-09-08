@@ -17,5 +17,5 @@ if __name__ == "__main__":
     agent = Agent.initialize(prompt)
     agent.generate_initial(precision=2)
     while True:
-        message = input("Enter a message for the agent: ")
+        message = input("Enter an edit request for the agent: ")
         agent.generate_iteration(message)
