@@ -194,7 +194,7 @@ class Agent:
     def generate_iteration(self, iteration: str, llm_api_key: Optional[str] = None) -> Optional[str]:
         assert self.last_program_id is not None
 
-        examples_prompt = generate_examples_for_iteration_prompt(self.initial_prompt)
+        examples_prompt = generate_examples_for_iteration_prompt(self.initial_prompt, top_n=6)
 
         messages = iteration_messages(
             self.initial_prompt,

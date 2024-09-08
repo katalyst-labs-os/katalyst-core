@@ -96,7 +96,7 @@ Here are some examples to help you succeed at your task:
 
 # Your task:
 
-Create a programatic CAD model by writing Python code based on Cadquery. You may then be asked for modifications by the user.
+Create a programatic CAD model by writing Python code based on build123d. You may then be asked for modifications by the user.
 
 {_code_guidelines()}
 
@@ -171,7 +171,7 @@ ALWAYS WRAP THE CODE IN <code> </code>.
 
 BUILD123D USES MILIMETERS AS ITS DEFAULT UNIT, DO THE CONVERSION USING DIVISIONS OR MULTIPLICATION IF NEEDED (1inch = 25.4mm).
 
-DON'T USE ASSEMBLIES, YOU DON'T KNOW HOW TO USE THEM. USE TRANSFORMATIONS AND BOOLEAN OPERATIONS INSTEAD of Workplane.add.
+DON'T USE ASSEMBLIES, YOU DON'T KNOW HOW TO USE THEM. USE TRANSFORMATIONS AND BOOLEAN OPERATIONS INSTEAD.
 
 TAKE INSPIRATION FROM THE EXAMPLES TO KNOW HOW TO CALL BUILD123D FUNCTIONS, YOUR KNOWLEDGE ON HOW TO USE THEM IS VERY PROBABLY DEPRECATED OTHERWISE.
 """
