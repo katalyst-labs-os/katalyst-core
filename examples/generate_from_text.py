@@ -1,32 +1,3 @@
-# KATALYST Core
-
-The open-source core of KATALYST. It comprises all the algorithms needed to generate parametric CAD models, execute them, iterate on them, evaluate them and manage a dataset of designs.
-
-It is mostly powered by the Build123D programmatic CAD Python library and by Openrouter's LLMs API endpoints. There is also some RAGging going on with the `sentence-transformers` Python library.
-
-## Installation
-
-Conda is mainly use to isolate the environment and dictate the python version. For the dependencies, we use pip.
-
-```bash
-conda env create -f environment.yml
-conda activate katalyst-core
-pip install -r requirements.txt
-pip install -r requirements-dev.txt # if for development
-pip install -e .
-```
-
-## Usage example
-
-Via the `run_agent` script:
-
-```bash
-python katalyst-core/scripts/run_agent.py
-```
-
-Via code:
-
-```py
 from katalyst_core.algorithms.cad_generation.agent import Agent
 from katalyst_core.programs.storage import program_dir_path
 
@@ -50,6 +21,3 @@ while True:
 
     message = input("Enter an edit request for the agent: ")
     program_id = agent.generate_iteration(message)
-```
-
-For more examples, see the [examples directory](./examples/).
