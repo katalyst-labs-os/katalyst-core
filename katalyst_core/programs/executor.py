@@ -67,11 +67,11 @@ def execute(
     if params_dict is not None:
         # logger.trace(f"New params to be applied: \n{params_dict}")
         code = apply_params(code, params_dict)
-        # logger.trace(f"Code after applying params: \n{code}")
+        logger.trace(f"Code after applying params: \n{code}")
 
     if export_format != "stl":
         code = replace_export_function(code, export_format)
-        # logger.trace(f"Code after replacing exportStl: \n{code}")
+        logger.trace(f"Code after replacing exportStl: \n{code}")
 
     temp_script_path = program_script_path(program_id) + ".tmp"
     logger.trace(f"Writing script to be executed to {temp_script_path}")
@@ -114,8 +114,8 @@ def execute(
         success = False
     except Exception as e:
         logger.info("Failed to execute script")
-        # logger.info(e)
-        # logger.trace(traceback.format_exc())
+        logger.info(e)
+        logger.trace(traceback.format_exc())
         output = str(e)
         success = False
 
@@ -263,23 +263,48 @@ def replace_export_function(script, new_extension):
     func_name = export_functions.get(new_extension)
     if not func_name:
         return script
+    
+    # Remove tolerance parameter
+    pattern = r",\s*tolerance=\d+(\.\d+)?"
+    script = re.sub(pattern, '', script)
 
     lines = script.split("\n")
 
+    # Keep track of filename variables
+    filename_vars = {}
+
+    # Regular expression for export_stl function call with filename as a string or variable
+    func_pattern = re.compile(r'export_stl\((\w+),\s*(\w+|["\'](.+?)\.stl["\'])\)')
+    
     for i, line in enumerate(lines):
-        if new_extension == ".3mf":
-            mesher_pattern = re.compile(r"export_stl\((\w+),\s*['\"](.+?)\.stl['\"]\)")
-            match = mesher_pattern.search(line)
-            if match:
-                new_line = f"{func_name}().add_shape({match.group(1)})\n{func_name}().write('{match.group(2)}{new_extension}')"
-                lines[i] = new_line
-        else:
-            pattern = re.compile(rf"export_stl\((\w+),\s*['\"](.+?)\.stl['\"]\)")
-            match = pattern.search(line)
-            if match:
-                new_line = f"{func_name}({match.group(1)}, '{match.group(2)}{new_extension}')"
-                lines[i] = new_line
+        # Check for a variable assignment of the form: some_filename_var = "some_file.stl"
+        assign_pattern = re.compile(r'(\w+)\s*=\s*["\'](.+?)\.stl["\']')
+        assign_match = assign_pattern.search(line)
+        if assign_match:
+            var_name, filename = assign_match.groups()
+            # Store the variable name and the associated filename
+            filename_vars[var_name] = filename + new_extension
+            lines[i] = line.replace(".stl", new_extension)
+            continue
+
+        # Check if line contains export_stl function with either string or variable as filename
+        func_match = func_pattern.search(line)
+        if func_match:
+            var_name = func_match.group(1)
+            file_arg = func_match.group(2)
+
+            # Handle case where file_arg is a variable
+            if file_arg in filename_vars:
+                new_line = f"{func_name}({var_name}, {file_arg})"
+            else:
+                # Handle case where file_arg is a string literal
+                new_file_name = func_match.group(3) + new_extension if func_match.group(3) else None
+                if new_file_name:
+                    new_line = f"{func_name}({var_name}, '{new_file_name}')"
+                else:
+                    continue
+            
+            lines[i] = new_line
 
     script = "\n".join(lines)
-
     return script
