@@ -148,12 +148,13 @@ def execute_first_time(script: str) -> tuple[Optional[str], str, bool]:
 
     return program_id, output, True
 
+
 def set_tolerance(code: str, tolerance=5) -> str:
     if ", tolerance=" in code:
-        pattern = r'(.*tolerance=)(\d+(\.\d+)?)(.*)'
-        replacement = r'\g<1>{}\g<4>'.format(tolerance)
+        pattern = r"(.*tolerance=)(\d+(\.\d+)?)(.*)"
+        replacement = r"\g<1>{}\g<4>".format(tolerance)
         return re.sub(pattern, replacement, code, flags=re.DOTALL)
-    
+
     pattern = r"(export_stl\(\s*[^,]+,\s*[^)]+)(\))"
     replacement = r"\g<1>, tolerance={}\g<2>".format(tolerance)
     return re.sub(pattern, replacement, code)
@@ -239,15 +240,16 @@ def fix_and_replace_filename(code: str, by: str) -> str:
 
     code = "\n".join(modified_lines)
 
-    pattern = r'(\w+)\.export_stl\(([^)]+)\)'
-    
+    pattern = r"(\w+)\.export_stl\(([^)]+)\)"
+
     def replacer(match):
         obj = match.group(1)
         filename = match.group(2)
-        return f'export_stl({obj}, {filename})'
+        return f"export_stl({obj}, {filename})"
 
     modified_code = re.sub(pattern, replacer, code)
     return modified_code
+
 
 def replace_export_function(script, new_extension):
     if not new_extension.startswith("."):
@@ -264,10 +266,10 @@ def replace_export_function(script, new_extension):
     func_name = export_functions.get(new_extension)
     if not func_name:
         return script
-    
+
     # Remove tolerance parameter
     pattern = r",\s*tolerance=\d+(\.\d+)?"
-    script = re.sub(pattern, '', script)
+    script = re.sub(pattern, "", script)
 
     lines = script.split("\n")
 
@@ -276,7 +278,7 @@ def replace_export_function(script, new_extension):
 
     # Regular expression for export_stl function call with filename as a string or variable
     func_pattern = re.compile(r'export_stl\((\w+),\s*(\w+|["\'](.+?)\.stl["\'])\)')
-    
+
     for i, line in enumerate(lines):
         # Check for a variable assignment of the form: some_filename_var = "some_file.stl"
         assign_pattern = re.compile(r'(\w+)\s*=\s*["\'](.+?)\.stl["\']')
@@ -299,12 +301,14 @@ def replace_export_function(script, new_extension):
                 new_line = f"{func_name}({var_name}, {file_arg})"
             else:
                 # Handle case where file_arg is a string literal
-                new_file_name = func_match.group(3) + new_extension if func_match.group(3) else None
+                new_file_name = (
+                    func_match.group(3) + new_extension if func_match.group(3) else None
+                )
                 if new_file_name:
                     new_line = f"{func_name}({var_name}, '{new_file_name}')"
                 else:
                     continue
-            
+
             lines[i] = new_line
 
     script = "\n".join(lines)

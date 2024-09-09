@@ -2,7 +2,10 @@ from dataclasses import dataclass
 from typing import Optional
 from loguru import logger
 
-from katalyst_core.algorithms.cad_generation.generation import GenerationStep, GenerationResult
+from katalyst_core.algorithms.cad_generation.generation import (
+    GenerationStep,
+    GenerationResult,
+)
 from katalyst_core.programs.storage import program_delete
 
 
@@ -17,7 +20,9 @@ class GenerationPipeline:
         final_discarded = []
         for step in self.steps:
             logger.info(f"[{pipeline_id}] Executing step: {step}")
-            results, discarded = step.execute(pipeline_id, prompt, previous, llm_api_key)
+            results, discarded = step.execute(
+                pipeline_id, prompt, previous, llm_api_key
+            )
             logger.info(
                 f"[{pipeline_id}] Finished step with {len(results)} results: {step}"
             )

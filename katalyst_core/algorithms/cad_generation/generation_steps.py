@@ -20,7 +20,9 @@ from katalyst_core.algorithms.cad_generation.generation import (
     GenerationResult,
     GenerationStep,
 )
-from katalyst_core.algorithms.cad_generation.generation_pipeline import GenerationPipeline
+from katalyst_core.algorithms.cad_generation.generation_pipeline import (
+    GenerationPipeline,
+)
 from katalyst_core.algorithms.docs_to_desc.stl_visual_desc import compare_stl_to_prompt
 from katalyst_core.programs.executor import read_program_code
 from katalyst_core.programs.storage import program_stl_path
@@ -41,7 +43,9 @@ class GenerationStepParallel(GenerationStep):
         discarded = []
         with ThreadPoolExecutor() as executor:
             futures = [
-                executor.submit(step.execute, pipeline_id, prompt, previous, llm_api_key)
+                executor.submit(
+                    step.execute, pipeline_id, prompt, previous, llm_api_key
+                )
                 for step in self.steps
             ]
             for future in as_completed(futures):
@@ -90,7 +94,11 @@ class GenerationStepKeepComplex(GenerationStep):
     top_n: int
 
     def execute(
-        self, pipeline_id: int, _prompt: str, previous: list[GenerationResult], llm_api_key: Optional[str] = None
+        self,
+        pipeline_id: int,
+        _prompt: str,
+        previous: list[GenerationResult],
+        llm_api_key: Optional[str] = None,
     ) -> tuple[list[GenerationResult], list[GenerationResult]]:
         logger.info(
             f"[{pipeline_id}] Keeping top {self.top_n} most complex solutions out of {len(previous)}"
@@ -105,7 +113,11 @@ class GenerationStepKeepBestRated(GenerationStep):
     top_n: int
 
     def execute(
-        self, pipeline_id: int, _prompt: str, previous: list[GenerationResult], llm_api_key: Optional[str] = None
+        self,
+        pipeline_id: int,
+        _prompt: str,
+        previous: list[GenerationResult],
+        llm_api_key: Optional[str] = None,
     ) -> tuple[list[GenerationResult], list[GenerationResult]]:
         logger.info(
             f"[{pipeline_id}] Keeping top {self.top_n} best rated solutions out of {len(previous)}"
@@ -123,7 +135,11 @@ class GenerationStepImprove(GenerationStep):
     n_examples: int
 
     def execute(
-        self, pipeline_id: int, prompt: str, previous: list[GenerationResult], llm_api_key: Optional[str] = None
+        self,
+        pipeline_id: int,
+        prompt: str,
+        previous: list[GenerationResult],
+        llm_api_key: Optional[str] = None,
     ) -> tuple[list[GenerationResult], list[GenerationResult]]:
         commented_examples = commented_results_to_examples(prompt, previous)
 
@@ -205,7 +221,11 @@ class GenerationStepComment(GenerationStep):
     model: str
 
     def execute(
-        self, pipeline_id: int, prompt: str, previous: list[GenerationResult], llm_api_key: Optional[str] = None
+        self,
+        pipeline_id: int,
+        prompt: str,
+        previous: list[GenerationResult],
+        llm_api_key: Optional[str] = None,
     ) -> tuple[list[GenerationResult], list[GenerationResult]]:
         def _comment(result: GenerationResult):
             maybe_comment = comment_result(prompt, result, self.model, llm_api_key)
@@ -246,15 +266,25 @@ class GenerationStepVisualRate(GenerationStep):
     model: str
 
     def execute(
-        self, pipeline_id: int, prompt: str, previous: list[GenerationResult], llm_api_key: Optional[str] = None
+        self,
+        pipeline_id: int,
+        prompt: str,
+        previous: list[GenerationResult],
+        llm_api_key: Optional[str] = None,
     ) -> tuple[list[GenerationResult], list[GenerationResult]]:
         def _rate(result: GenerationResult):
             maybe = compare_stl_to_prompt(
-                program_stl_path(result.program_id), prompt, self.model, llm_api_key=llm_api_key
+                program_stl_path(result.program_id),
+                prompt,
+                self.model,
+                llm_api_key=llm_api_key,
             )
             if maybe is None:
                 maybe = compare_stl_to_prompt(
-                    program_stl_path(result.program_id), prompt, self.model, llm_api_key=llm_api_key
+                    program_stl_path(result.program_id),
+                    prompt,
+                    self.model,
+                    llm_api_key=llm_api_key,
                 )
                 if maybe is None:
                     return None
@@ -295,7 +325,11 @@ class GenerationStepInitial(GenerationStep):
     n_examples: int
 
     def execute(
-        self, pipeline_id: int, prompt: str, previous: list[GenerationResult], llm_api_key: Optional[str] = None
+        self,
+        pipeline_id: int,
+        prompt: str,
+        previous: list[GenerationResult],
+        llm_api_key: Optional[str] = None,
     ) -> tuple[list[GenerationResult], list[GenerationResult]]:
         def _generate_initial(initial_prompt):
             examples_prompt, _ = generate_examples_for_prompt(

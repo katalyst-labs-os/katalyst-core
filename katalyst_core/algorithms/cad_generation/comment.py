@@ -4,7 +4,10 @@ from loguru import logger
 from katalyst_core.algorithms.cad_generation.generation import GenerationResult
 
 from katalyst_core.algorithms.cad_generation.utils import init_client
-from katalyst_core.algorithms.docs_to_desc.stl_visual_desc import compare_stl_to_prompt, describe_stl
+from katalyst_core.algorithms.docs_to_desc.stl_visual_desc import (
+    compare_stl_to_prompt,
+    describe_stl,
+)
 from katalyst_core.programs.storage import program_stl_path
 
 
@@ -38,7 +41,10 @@ def commented_results_to_examples(
 
 
 def comment_result(
-    initial_prompt: str, result: GenerationResult, model: str, llm_api_key: Optional[str] = None
+    initial_prompt: str,
+    result: GenerationResult,
+    model: str,
+    llm_api_key: Optional[str] = None,
 ) -> Optional[tuple[str, tuple[str, int]]]:
     stl_path = program_stl_path(result.program_id)
     description = describe_stl(stl_path, model, llm_api_key)

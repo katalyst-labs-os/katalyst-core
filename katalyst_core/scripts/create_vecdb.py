@@ -34,11 +34,7 @@ images_path = PICTURES_PATH
 df = pd.read_csv(DATASET_PATH)
 df = df[df["files"].notna()]
 df = df[df["files"] != ""]
-df = (
-    df.assign(files=df["files"].str.split(";"))
-    .explode("files")
-    .reset_index(drop=True)
-)
+df = df.assign(files=df["files"].str.split(";")).explode("files").reset_index(drop=True)
 
 df = df[df["files"].str.lower().str.endswith((".png", ".jpeg", ".jpg"))]
 

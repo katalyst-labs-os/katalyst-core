@@ -30,9 +30,7 @@ def generate_examples_for_iteration_prompt(
     backends = ["build123d:noassembly"]
     if assemblies:
         backends.append("build123d:assembly")
-    examples: list[DatasetStep] = list(
-        read_steps_dataset(only_backends=backends)
-    )
+    examples: list[DatasetStep] = list(read_steps_dataset(only_backends=backends))
 
     prompt_embedding = model.encode(prompt)
 

@@ -39,7 +39,7 @@ def code_run_fix_loop(
         user_message = error_message(output)
         if iterations > 0 and iterations < max_iterations - 1:
             # TODO: insert hard-coded build123d specific tips here like we did before with cadquery
-            
+
             output += """
 
 # Build123d cheatsheet
@@ -121,7 +121,10 @@ Some other common errors:
 
 
 def _code_from_conversation(
-    messages: list[dict], model=MODEL, temperature=0.4, llm_api_key: Optional[str] = None
+    messages: list[dict],
+    model=MODEL,
+    temperature=0.4,
+    llm_api_key: Optional[str] = None,
 ) -> Optional[tuple[str, str]]:
     try:
         client = init_client(llm_api_key)

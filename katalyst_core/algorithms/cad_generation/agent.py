@@ -5,7 +5,9 @@ from katalyst_core.programs.executor import read_program_code
 
 from katalyst_core.programs.storage import program_stl_path
 
-from katalyst_core.algorithms.cad_generation.generation_pipeline import GenerationPipeline
+from katalyst_core.algorithms.cad_generation.generation_pipeline import (
+    GenerationPipeline,
+)
 from katalyst_core.algorithms.cad_generation.generation_steps import (
     GenerationStepInitial,
     GenerationStepKeepComplex,
@@ -18,8 +20,14 @@ from katalyst_core.algorithms.cad_generation.generation_steps import (
 )
 from katalyst_core.algorithms.cad_generation.code_generation import code_run_fix_loop
 from katalyst_core.algorithms.cad_generation.prompting import iteration_messages
-from katalyst_core.algorithms.cad_generation.examples_ragging import generate_examples_for_iteration_prompt
-from katalyst_core.algorithms.cad_generation.constants import MODEL, MODEL_FAST, MODEL_MED
+from katalyst_core.algorithms.cad_generation.examples_ragging import (
+    generate_examples_for_iteration_prompt,
+)
+from katalyst_core.algorithms.cad_generation.constants import (
+    MODEL,
+    MODEL_FAST,
+    MODEL_MED,
+)
 
 
 class Agent:
@@ -47,7 +55,9 @@ class Agent:
     def initialize(initial_prompt: str) -> "Agent":
         return Agent(initial_prompt, "", [], None, 0)
 
-    def generate_initial(self, precision: int, llm_api_key: Optional[str] = None) -> Optional[str]:
+    def generate_initial(
+        self, precision: int, llm_api_key: Optional[str] = None
+    ) -> Optional[str]:
         random_id = str(time.time())
 
         logger.info(
@@ -178,7 +188,9 @@ class Agent:
 
         self.initial_precision = precision
 
-        results = pipeline.execute(random_id, prompt=self.initial_prompt, llm_api_key=llm_api_key)
+        results = pipeline.execute(
+            random_id, prompt=self.initial_prompt, llm_api_key=llm_api_key
+        )
 
         if results is None or len(results) == 0:
             logger.error(f"[{random_id}] Failed to generate solution")
@@ -191,10 +203,14 @@ class Agent:
 
         return results[0].program_id
 
-    def generate_iteration(self, iteration: str, llm_api_key: Optional[str] = None) -> Optional[str]:
+    def generate_iteration(
+        self, iteration: str, llm_api_key: Optional[str] = None
+    ) -> Optional[str]:
         assert self.last_program_id is not None
 
-        examples_prompt = generate_examples_for_iteration_prompt(self.initial_prompt, top_n=6)
+        examples_prompt = generate_examples_for_iteration_prompt(
+            self.initial_prompt, top_n=6
+        )
 
         messages = iteration_messages(
             self.initial_prompt,
@@ -205,7 +221,9 @@ class Agent:
             examples_prompt,
         )
 
-        program_id, reasoning, success = code_run_fix_loop(messages, model=MODEL, llm_api_key=llm_api_key)
+        program_id, reasoning, success = code_run_fix_loop(
+            messages, model=MODEL, llm_api_key=llm_api_key
+        )
 
         if not success:
             return None
