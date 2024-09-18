@@ -19,7 +19,7 @@ setup(
         "loguru",
         "vtk",
         "numpy==1.26.4",
-        "build123d",
+        "cadquery",
         "airfoils",
         "bd-warehouse @ git+https://github.com/gumyr/bd_warehouse",
         "sentence-transformers==3.0.1",

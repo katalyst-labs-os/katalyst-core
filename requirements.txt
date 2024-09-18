@@ -4,7 +4,7 @@ loguru
 vtk
 numpy==1.26.4
 # cadquery==2.4.0
-build123d
+cadquery
 airfoils
 # git+https://github.com/meadiode/cq_gears.git@main
 git+https://github.com/gumyr/bd_warehouse

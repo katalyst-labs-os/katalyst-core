@@ -27,9 +27,9 @@ if os.path.exists(CACHE_FILE_PATH):
 def generate_examples_for_iteration_prompt(
     prompt: str, assemblies: bool = False, top_n: int = 3
 ):
-    backends = ["build123d:noassembly"]
+    backends = ["cadquery:noassembly"]
     if assemblies:
-        backends.append("build123d:assembly")
+        backends.append("cadquery:assembly")
     examples: list[DatasetStep] = list(read_steps_dataset(only_backends=backends))
 
     prompt_embedding = model.encode(prompt)
@@ -46,7 +46,7 @@ def generate_examples_for_iteration_prompt(
     relevant_examples.sort(key=lambda x: x[1], reverse=True)
     top_examples = relevant_examples[:top_n]
 
-    examples_prompt = "Here are some examples of how to edit build123d code in response to similar follow-up requests:\n\n"
+    examples_prompt = "Here are some examples of how to edit cadquery code in response to similar follow-up requests:\n\n"
     for example, similarity in top_examples:
         examples_prompt += f"""
 <example>
@@ -66,9 +66,9 @@ def generate_examples_for_iteration_prompt(
 
 
 def generate_examples_for_prompt(prompt: str, assemblies: bool = False, top_n: int = 7):
-    backends = ["build123d:noassembly"]
+    backends = ["cadquery:noassembly"]
     if assemblies:
-        backends.append("build123d:assembly")
+        backends.append("cadquery:assembly")
     examples = list(read_dataset(only_backends=backends))
 
     prompt_embedding = _get_or_compute_embedding(prompt)

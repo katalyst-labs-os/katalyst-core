@@ -27,15 +27,9 @@ from katalyst_core.programs.storage import (
 from katalyst_core.programs.thumbnail import program_to_thumbnail
 
 preamble = """
-from build123d import *
-import build123d as bd
-from bd_warehouse.thread import *
-from bd_warehouse.pipe import *
-from bd_warehouse.flange import *
-from bd_warehouse.bearing import *
-from bd_warehouse.fastener import *
-from bd_warehouse.gear import *
-from bd_warehouse.open_builds import *
+import cadquery as cq
+import cadquery
+from cq_gears import *
 import math
 import numpy as np
 import random
@@ -150,17 +144,17 @@ def execute_first_time(script: str) -> tuple[Optional[str], str, bool]:
 
 
 def set_tolerance(code: str, tolerance=5) -> str:
-    if ", tolerance=" in code:
-        pattern = r"(.*tolerance=)(\d+(\.\d+)?)(.*)"
-        replacement = r"\g<1>{}\g<4>".format(tolerance)
-        return re.sub(pattern, replacement, code, flags=re.DOTALL)
-
-    pattern = r"(export_stl\(\s*[^,]+,\s*[^)]+)(\))"
-    replacement = r"\g<1>, tolerance={}\g<2>".format(tolerance)
-    return re.sub(pattern, replacement, code)
+    # TODO: Make it work with cadquery assemblies
+    # TODO: Make it work with build123d
+    return code.replace(
+        ".exportSTL(filename)", f".exportSTL(filename, tolerance={tolerance})"
+    )
 
 
 def fix_and_replace_filename(code: str, by: str) -> str:
+    # TODO: Make it work with cadquery assemblies
+    # TODO: Make it work with build123d
+
     lines = code.split("\n")
     modified_lines = []
     last_assignment = None
@@ -183,17 +177,17 @@ def fix_and_replace_filename(code: str, by: str) -> str:
                     line = f"filename = {modified_value_part}"
                     replaced = True
 
-        if var_name is not None and replaced and "export_stl(" in stripped_line:
+        if var_name is not None and replaced and ".exportStl(" in stripped_line:
             line = line.replace(var_name, "filename")
 
         modified_lines.append(line)
 
-    # If no replacement was done, check for export_stl("<myname>.stl")
+    # If no replacement was done, check for .exportStl("<myname>.stl")
     if not replaced:
         new_modified_lines = []
         for line in modified_lines:
             stripped_line = line.strip()
-            if "export_stl(" in stripped_line:
+            if ".exportStl(" in stripped_line:
                 start_quote = (
                     stripped_line.find('"')
                     if '"' in stripped_line
@@ -220,7 +214,7 @@ def fix_and_replace_filename(code: str, by: str) -> str:
         if replaced:
             return "\n".join(new_modified_lines)
 
-    # If no export_stl() case found, look for the last assignment
+    # If no .exportStl() case found, look for the last assignment
     if not replaced:
         new_modified_lines = modified_lines[:]
         for i in range(len(new_modified_lines) - 1, -1, -1):
@@ -234,82 +228,41 @@ def fix_and_replace_filename(code: str, by: str) -> str:
 
         if last_assignment:
             new_modified_lines.append(f'filename = "{by}"')
-            new_modified_lines.append(f"export_stl({last_assignment}, filename)")
+            new_modified_lines.append(f"{last_assignment}.val().exportStl(filename)")
 
         return "\n".join(new_modified_lines)
 
-    code = "\n".join(modified_lines)
-
-    pattern = r"(\w+)\.export_stl\(([^)]+)\)"
-
-    def replacer(match):
-        obj = match.group(1)
-        filename = match.group(2)
-        return f"export_stl({obj}, {filename})"
-
-    modified_code = re.sub(pattern, replacer, code)
-    return modified_code
+    return "\n".join(modified_lines)
 
 
 def replace_export_function(script, new_extension):
+    # TODO: Make it work with cadquery assemblies
+    # TODO: Make it work with build123d
+
+    # Ensure the new extension starts with a dot
     if not new_extension.startswith("."):
         new_extension = "." + new_extension
 
-    export_functions = {
-        ".stl": "export_stl",
-        ".brep": "export_brep",
-        ".step": "export_step",
-        ".gltf": "export_gltf",
-        ".3mf": "Mesher",
-    }
+    # Regular expression to find the exportStl line
+    export_stl_pattern = re.compile(r"(\w+)\.val\(\)\.exportStl\((\s*\w+\s*)")
 
-    func_name = export_functions.get(new_extension)
-    if not func_name:
-        return script
-
-    # Remove tolerance parameter
-    pattern = r",\s*tolerance=\d+(\.\d+)?"
-    script = re.sub(pattern, "", script)
-
+    # Split the script into lines
     lines = script.split("\n")
 
-    # Keep track of filename variables
-    filename_vars = {}
-
-    # Regular expression for export_stl function call with filename as a string or variable
-    func_pattern = re.compile(r'export_stl\((\w+),\s*(\w+|["\'](.+?)\.stl["\'])\)')
-
+    # Iterate through each line and replace the matched pattern
     for i, line in enumerate(lines):
-        # Check for a variable assignment of the form: some_filename_var = "some_file.stl"
-        assign_pattern = re.compile(r'(\w+)\s*=\s*["\'](.+?)\.stl["\']')
-        assign_match = assign_pattern.search(line)
-        if assign_match:
-            var_name, filename = assign_match.groups()
-            # Store the variable name and the associated filename
-            filename_vars[var_name] = filename + new_extension
-            lines[i] = line.replace(".stl", new_extension)
-            continue
-
-        # Check if line contains export_stl function with either string or variable as filename
-        func_match = func_pattern.search(line)
-        if func_match:
-            var_name = func_match.group(1)
-            file_arg = func_match.group(2)
-
-            # Handle case where file_arg is a variable
-            if file_arg in filename_vars:
-                new_line = f"{func_name}({var_name}, {file_arg})"
-            else:
-                # Handle case where file_arg is a string literal
-                new_file_name = (
-                    func_match.group(3) + new_extension if func_match.group(3) else None
-                )
-                if new_file_name:
-                    new_line = f"{func_name}({var_name}, '{new_file_name}')"
-                else:
-                    continue
-
+        match = export_stl_pattern.search(line)
+        if match:
+            # Construct the replacement line
+            new_line = f"cq.exporters.export({match.group(1)}, {match.group(2)})"
+            # Replace the line in the list
             lines[i] = new_line
 
+    # Join the lines back into a single script
     script = "\n".join(lines)
+
+    # Regular expression to find the filename line and change the extension
+    filename_pattern = re.compile(r'(filename\s*=\s*[\'"])(.*?)(\.stl)([\'"])')
+    script = filename_pattern.sub(rf"\1\2{new_extension}\4", script)
+
     return script

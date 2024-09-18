@@ -101,7 +101,7 @@ code:
 ```
 ---
 
-Above is an example pair we give to LLMs for few shot prompting to generate build123d code from a text description.
+Above is an example pair we give to LLMs for few shot prompting to generate cadquery code from a text description.
 We have a new feature for continuous text-based user feedback and iteration, where the user might ask for any change or edit.
 By using what's inside the code of this example already, construct intermediary examples of the form:
 - code before
@@ -120,12 +120,12 @@ answer in the following format:
 ```
 </code-before>
 <request>
-Create an empty Build123d model with a default workplane.
+Create an empty Cadquery model with a default workplane.
 </request>
 <edits>
-Initialize a model with a default workplane in Build123d.
+Initialize a model with a default workplane in Cadquery.
 ```
-from build123d import *
+from cadquery import *
 
 with BuildPart() as part:
     pass
@@ -136,7 +136,7 @@ with BuildPart() as part:
 <step>
 <code-before>
 ```
-from build123d import *
+from cadquery import *
 
 with BuildPart() as part:
     pass

@@ -2,60 +2,38 @@ from typing import Optional
 import time
 from loguru import logger
 from katalyst_core.algorithms.cad_generation.utils import init_client
-from katalyst_core.programs.executor import execute_first_time, read_program_code
+from katalyst_core.programs.executor import execute_first_time
 
 from katalyst_core.programs.storage import program_stl_path
 from katalyst_core.programs.executor import preamble
 
-from katalyst_core.algorithms.cad_generation.generation_pipeline import (
-    GenerationPipeline,
-)
-from katalyst_core.algorithms.cad_generation.generation_steps import (
-    GenerationStepInitial,
-    GenerationStepKeepComplex,
-    GenerationStepVisualRate,
-    GenerationStepKeepBestRated,
-    GenerationStepComment,
-    GenerationStepImprove,
-    GenerationStepParallel,
-    GenerationStepPipeline,
-)
-from katalyst_core.algorithms.cad_generation.code_generation import code_run_fix_loop
-from katalyst_core.algorithms.cad_generation.prompting import iteration_messages
 from katalyst_core.algorithms.cad_generation.examples_ragging import (
     generate_examples_for_iteration_prompt,
 )
 from katalyst_core.algorithms.cad_generation.constants import (
     MODEL,
     MODEL_FAST,
-    MODEL_MED,
 )
 
 
 class Agent:
     initial_prompt: str
-    initial_reasoning: str
-    iterations: list[tuple[str, str]]
     last_program_id: Optional[str]
     initial_precision: int
 
     def __init__(
         self,
         initial_prompt: str,
-        initial_reasoning: str,
-        iterations: list[tuple[str, str]],
         last_program_id: Optional[str],
         initial_precision: int,
     ):
         self.initial_prompt = initial_prompt
-        self.initial_reasoning = initial_reasoning
-        self.iterations = iterations
         self.last_program_id = last_program_id
         self.initial_precision = initial_precision
 
     @staticmethod
     def initialize(initial_prompt: str) -> "Agent":
-        return Agent(initial_prompt, "", [], None, 0)
+        return Agent(initial_prompt, None, 0)
 
     def generate_initial(
         self, precision: int, llm_api_key: Optional[str] = None
@@ -67,199 +45,8 @@ class Agent:
         )
 
         examples = generate_examples_for_iteration_prompt(self.initial_prompt, assemblies=False, top_n=10)
-
-        messages = [
-            {
-                "role": "user",
-                "content": f"""
-Examples:
-
-{examples}
-
-# Build123d cheatsheet
-
-Your knowledge on build123d's API is not up to date. Follow thoroughly the examples, they are your source of truth. Additionally, here are some functions you might need:
-
-In build123d almost everything is a Shape, except objects created with: "with BuildPart() as ...:" which are BuildPart objects (and the same for BuildSketch). You can access the inner Shape object with "part.part".
-
-```
-with BuildPart() as part:
-    ...
-
-result = part 
-export_stl(result, filename) # This will not work
-result = part.part 
-export_stl(result, filename) # This will work
-```
-
-```
-result = part.<function_name>  # This will not work
-result = part.part.<function_name>  # This will work
-```
-
-The functions below work with any object with type Shape, but not with BuildPart or BuildSketch types:
-
-- sweep(sections: Optional[Union[Compound, Edge, Wire, Face, Solid, Iterable[Union[Compound, Edge, Wire, Face, Solid]]]] = None, path: Optional[Union[Curve, Edge, Wire, Iterable[Edge]]] = None, multisection: bool = False, is_frenet: bool = False, transition: Transition = Transition.TRANSFORMED, normal: Optional[Union[Vector, tuple[float, float], tuple[float, float, float], Iterable[float]]] = None, binormal: Optional[Union[Edge, Wire]] = None, clean: bool = True, mode: Mode = Mode.ADD)→ Union[Part, Sketch] Generic Operation: sweep. Sweep pending 1D or 2D objects along path. 
-
-- offset(objects: Optional[Union[Edge, Face, Solid, Compound, Iterable[Union[Edge, Face, Solid, Compound]]]] = None, amount: float = 0, openings: Optional[Union[Face, list[build123d.topology.Face]]] = None, kind: Kind = Kind.ARC, side: Side = Side.BOTH, closed: bool = True, min_edge_length: Optional[float] = None, mode: Mode = Mode.REPLACE)→ Union[Curve, Sketch, Part, Compound] Generic Operation: offset. Applies to 1, 2, and 3 dimensional objects. Offset the given sequence of Edges, Faces, Compound of Faces, or Solids. The kind parameter controls the shape of the transitions. For Solid objects, the openings parameter allows selected faces to be open, like a hollow box with no lid.
-
-- revolve(profiles: Optional[Union[Face, Iterable[Face]]] = None, axis: Axis = ((0.0, 0.0, 0.0), (0.0, 0.0, 1.0)), revolution_arc: float = 360.0, clean: bool = True, mode: Mode = Mode.ADD)→ Part. Part Operation: Revolve. Revolve the profile or pending sketches/face about the given axis. Note that the most common use case is when the axis is in the same plane as the face to be revolved but this isn’t required.
-
-- scale(objects: Optional[Union[Shape, Iterable[Shape]]] = None, by: Union[float, tuple[float, float, float]] = 1, mode: Mode = Mode.REPLACE)→ Union[Curve, Sketch, Part, Compound]. Generic Operation: scale. Applies to 1, 2, and 3 dimensional objects. Scale a sequence of objects. Note that when scaling non-uniformly across the three axes, the type of the underlying object may change to bspline from line, circle, etc.
-
-- split(objects: Optional[Union[Edge, Wire, Face, Solid, Iterable[Union[Edge, Wire, Face, Solid]]]] = None, bisect_by: Plane = Plane(o=(0.00, 0.00, 0.00), x=(1.00, 0.00, 0.00), z=(0.00, -1.00, 0.00)), keep: Keep = Keep.TOP, mode: Mode = Mode.REPLACE). Generic Operation: split. Applies to 1, 2, and 3 dimensional objects. Bisect object with plane and keep either top, bottom or both.
-
-- sketch.section(obj: Optional[Part] = None, section_by: Union[Plane, Iterable[Plane]] = Plane(o=(0.00, 0.00, 0.00), x=(1.00, 0.00, 0.00), z=(0.00, -1.00, 0.00)), height: float = 0.0, clean: bool = True, mode: Mode = Mode.PRIVATE)→ Sketch. Part Operation: section. Slices current part at the given height by section_by or current workplane(s).
-
-- rotate(axis: Axis, angle: float) -> Shape   PLEASE NOTE: THERE IS NO OTHER WAY TO ROTATE ANYTHING IN BUILD123D
-
-- translate(vector: Vector(x: float, y: float, z: float)) -> Shape (preferred way to move objects)
-
-Some primitives you always mis-use:
-
-- Sphere(radius: float, arc_size1: float = -90, arc_size2: float = 90, arc_size3: float = 360, rotation: Union[tuple[float, float, float], geometry.Rotation] = (0, 0, 0), align: Union[Align, tuple[Align, Align, Align]] = (<Align.CENTER>, <Align.CENTER>, <Align.CENTER>), mode: Mode = Mode.ADD)
-
-- Cylinder(radius: float, height: float, arc_size: float = 360, rotation: Union[tuple[float, float, float], geometry.Rotation] = (0, 0, 0), align: Union[Align, tuple[Align, Align, Align]] = (<Align.CENTER>, <Align.CENTER>, <Align.CENTER>), mode: Mode = Mode.ADD)
-
-# Task
-
-Taking inspiration from the up to date syntax in the examples, code a very realistic parametric CAD model using build123d from the following prompt:
-
-<prompt>
-{self.initial_prompt}
-</prompt>
-
-No imports can be included by you, do not write any. The following imports will be added to your code automatically:
-
-<code>
-{preamble}
-</code>
-
-Now think about it and code it:
-"""
-            }
-        ]
-
-        client = init_client(llm_api_key)
-        response = client.chat.completions.create(
-            model=MODEL, messages=messages, temperature=0.4, timeout=40
-        )
-
-        logger.trace("Initial response: {}", response.choices[0].message.content)
-
-        # messages += [
-        #     {
-        #         "role": "assistant",
-        #         "content": response.choices[0].message.content,
-        #     },
-        #     {
-        #         "role": "user",
-        #         "content": "Make it 100x more realistic:"
-        #     }
-        # ]
-
-        # response = client.chat.completions.create(
-        #     model=MODEL, messages=messages, temperature=0.4, timeout=40
-        # )
-
-        # logger.trace("Second response: {}", response.choices[0].message.content)
-
-        messages += [
-            {
-                "role": "assistant",
-                "content": response.choices[0].message.content,
-            },
-            {
-                "role": "user",
-                "content": f"""
-Write the entire code in one text block wrapped around <code> </code> tags, without using markdown ``` and make sure the parameters are written with one `<variable> = <expression or literal>` per line (avoid dict, avoid list, avoid tuple, except if short and on one line).
-Make also sure parameters are between the imports and the first modeling line (first "with" for instance) and delimited by <parameters> </parameters> tags like in:
-
-<code>
-...
-# <parameters>
-radius = 10
-height = 20
-# </parameters>
-...
-with ...
-</code>
-
-"""
-            }
-        ]
-
-        response = client.chat.completions.create(
-            model=MODEL_FAST, messages=messages, temperature=0.4, timeout=40
-        )
-
-        logger.trace("Formatting response: {}", response.choices[0].message.content)
-
-        # messages += [
-        #     {
-        #         "role": "assistant",
-        #         "content": response.choices[0].message.content,
-        #     },
-        #     {
-        #         "role": "user",
-        #         "content": f"""Write the entire code in one text block and make sure the code has proper comments explaining the approach."""
-        #     }
-        # ]
-
-        # response = client.chat.completions.create(
-        #     model=MODEL_FAST, messages=messages, temperature=0.4, timeout=40
-        # )
-
-        # logger.trace("Documenting response: {}", response.choices[0].message.content)
-
-        code = response.choices[0].message.content.split("<code>", 1)[1].split("</code>", 1)[0].strip()
-        program_id, output, success = execute_first_time(code)
-
-        retries = 0
-        program_id = None
-        while not success and retries < 10:
-            if output.strip() == "":
-                output = "No bugs, but nothing was rendered, empty object. Look if you didn't substract/cut by too much."
-
-            messages += [
-                {
-                    "role": "assistant",
-                    "content": f"""
-<code>
-{code}
-</code>
-"""
-                },
-                {
-                    "role": "user",
-                    "content": f"""
-Interpreter feedback: 
-
-{output}
-
-Either: Fix the bug if it is incredibly trivial to do it (like if the error message explicitly tells you what to do), or
-Remove the part of the code that is buggy and adapt the rest of the code to work without it. The goal is to simplify so we can find all the errors in this code.
-"""
-                }
-            ]
-
-            response = client.chat.completions.create(
-                model=MODEL_FAST, messages=messages, temperature=0.4, timeout=40
-            )
-
-            logger.trace("Retry response {}: {}", retries, response.choices[0].message.content)
-
-            try:
-                code = response.choices[0].message.content.split("<code>", 1)[1].split("</code>", 1)[0].strip()
-            except Exception as e:
-                code = response.choices[0].message.content.replace("```python", "```").split("```", 1)[1].split("```", 1)[0].strip()
-
-            program_id, output, success = execute_first_time(code)
-            if success:
-                break
-            retries += 1
-
-        self.initial_reasoning = ""
+        
+        program_id, success = generate_cad(examples, self.initial_prompt, depth=precision, llm_api_key=llm_api_key)
 
         if not success:
             return None
@@ -279,33 +66,36 @@ Remove the part of the code that is buggy and adapt the rest of the code to work
             self.initial_prompt, top_n=6
         )
 
-        messages = iteration_messages(
-            self.initial_prompt,
-            self.initial_reasoning,
-            self.iterations,
-            read_program_code(self.last_program_id),
-            iteration,
-            examples_prompt,
-        )
+        previous_code = ""
+        with open(program_stl_path(self.last_program_id), "r") as f:
+            previous_code = f.read()
 
-        program_id, reasoning, success = code_run_fix_loop(
-            messages, model=MODEL, llm_api_key=llm_api_key
-        )
+        prompt = f"""
+Answering to the prompt:
+
+{self.initial_prompt}
+
+And various follow-ups, you used parametric CAD to model the following:
+
+{previous_code}
+
+Now you are asked with doing the following change:
+
+{iteration}
+"""
+
+        program_id, success = generate_cad(examples_prompt, prompt, depth=0, llm_api_key=llm_api_key)
 
         if not success:
             return None
 
-        self.initial_reasoning = reasoning
         self.last_program_id = program_id
-        self.iterations.append((iteration, reasoning))
 
         return program_id
 
     def to_dict(self) -> dict:
         return {
             "initial_prompt": self.initial_prompt,
-            "initial_reasoning": self.initial_reasoning,
-            "iterations": self.iterations,
             "last_program_id": self.last_program_id,
             "initial_precision": self.initial_precision,
         }
@@ -314,8 +104,271 @@ Remove the part of the code that is buggy and adapt the rest of the code to work
     def from_dict(d: dict) -> "Agent":
         return Agent(
             d["initial_prompt"],
-            d["initial_reasoning"],
-            [(i[0], i[1]) for i in d["iterations"]],
             d["last_program_id"],
             d.get("initial_precision", 0),
         )
+
+
+def generate_cad(examples: str, prompt: str, depth: int, llm_api_key: Optional[str] = None) -> tuple[Optional[str], bool]:
+    client = init_client(llm_api_key)
+    
+    messages = [
+        {
+            "role": "user",
+            "content": f"""
+Examples:
+
+{examples}
+
+<prompt>
+{prompt}
+</prompt>
+
+# Task
+
+Taking inspiration from the up to date syntax in the examples, code a very realistic parametric CAD model using cadquery from the above prompt
+
+No imports can be included by you, do not write any. The following imports will be added to your code automatically:
+
+<code>
+{preamble}
+</code>
+
+Write the entire code in one text block wrapped around <code> </code> tags, without using markdown ``` and make sure the parameters are written with one `<variable> = <expression or literal>` per line (avoid dict, avoid list, avoid tuple, except if short and on one line).
+Make also sure parameters are between the imports and the first modeling line and delimited by <parameters> </parameters> tags like in:
+
+<code>
+...
+# <parameters>
+radius = 10
+height = 20
+# </parameters>
+...
+</code>
+
+Make also sure you export to stl in the end:
+
+<code>
+...
+filename = "render.stl"
+result.val().exportStl(filename) # if result is a Workplane, you must call val() before exportStl
+</code>
+
+Now think and code it:
+"""
+        }
+    ]
+
+    response = client.chat.completions.create(
+        model=MODEL, messages=messages, temperature=0.4, timeout=40
+    )
+
+    logger.trace("Initial response: {}", response.choices[0].message.content)
+    
+    messages_improve = messages.copy()
+
+    try:
+        code = response.choices[0].message.content.split("<code>", 1)[1].split("</code>", 1)[0].strip()
+    except Exception as _:
+        try:
+            code = response.choices[0].message.content.replace("```python", "```").split("```", 1)[1].split("```", 1)[0].strip()
+        except Exception as _:
+            code = None
+
+    d = 0
+    while d < depth:        
+        messages_improve = [
+            {
+                "role": "assistant",
+                "content": code if code is not None else response.choices[0].message.content,
+            },
+            {
+                "role": "user",
+                "content": f"""
+Make the geometry 100x more realistic, more pro, more industry-ready.
+
+Tips:
+- use standard functions/values in the industry (implement them, it's unlikely the libraries we give you have them unless it's obvious)
+- make the code more modular
+- use math and equations to specify positions, proportions, sizes, surfaces, points, so that you mitigate the chances of bad value guessing or bad look (you are bad at spatial reasoning)
+- only touch the geometry, we DO NOT care about materials or simulation.
+
+PS: We do not have any data file available for anything, if you see this code is using a data file, change what it does, preferably implement a function that generates the data directly in the code.
+
+Write the entire code in one text block wrapped around <code> </code> tags, without using markdown ``` and make sure the parameters are written with one `<variable> = <expression or literal>` per line (avoid dict, avoid list, avoid tuple, except if short and on one line).
+Make also sure parameters are between the imports and the first modeling line and delimited by <parameters> </parameters> tags like in:
+
+<code>
+...
+# <parameters>
+radius = 10
+height = 20
+# </parameters>
+...
+</code>
+
+Make also sure you export to stl in the end:
+
+<code>
+... # __name__ == "__main__" is not allowed nor a main function
+filename = "render.stl"
+result.val().exportStl(filename) # if result is a Workplane, you must call val() before exportStl
+</code>
+"""
+            }
+        ]
+
+        response = client.chat.completions.create(
+            model=MODEL, messages=messages_improve, temperature=0.4, timeout=40
+        )
+
+        try:
+            code = response.choices[0].message.content.split("<code>", 1)[1].split("</code>", 1)[0].strip()
+        except Exception as e:
+            code = response.choices[0].message.content.replace("```python", "```").split("```", 1)[1].split("```", 1)[0].strip()
+
+        logger.trace("Precision response: {}", response.choices[0].message.content)
+        d += 1
+
+    resp_content = response.choices[0].message.content
+    no_parameters = "# <parameters>" not in resp_content or "# </parameters>" not in resp_content
+    no_code = "<code>" not in resp_content or "</code>" not in resp_content
+    no_export = "result.val().exportStl(filename)" not in resp_content
+
+    if no_parameters or no_code or no_export:
+        messages_improve += [
+            {
+                "role": "assistant",
+                "content": response.choices[0].message.content,
+            },
+            {
+                "role": "user",
+                "content": f"""
+Write the entire code in one text block wrapped around <code> </code> tags, without using markdown ``` and make sure the parameters are written with one `<variable> = <expression or literal>` per line (avoid dict, avoid list, avoid tuple, except if short and on one line).
+Make also sure parameters are between the imports and the first modeling line and delimited by <parameters> </parameters> tags like in:
+
+<code>
+...
+# <parameters>
+radius = 10
+height = 20
+# </parameters>
+...
+</code>
+
+Make also sure you export to stl in the end:
+
+<code>
+...
+filename = "render.stl"
+result.val().exportStl(filename) # if result is a Workplane, you must call val() before exportStl
+</code>
+    """
+            }
+        ]
+
+        response = client.chat.completions.create(
+            model=MODEL_FAST, messages=messages_improve, temperature=0.4, timeout=40
+        )
+
+        logger.trace("Formatting response: {}", response.choices[0].message.content)
+
+    code = response.choices[0].message.content.split("<code>", 1)[1].split("</code>", 1)[0].strip()
+    program_id, output, success = execute_first_time(code)
+
+    retries = 0
+    last_output = output
+    repeat_error = False
+    while not success and retries < 10:
+        if output.strip() == "":
+            output = "No bugs, but nothing was rendered, empty object. Look if you didn't substract/cut by too much."
+
+        if repeat_error:
+            messages_fix = messages.copy() + [
+                {
+                    "role": "assistant",
+                    "content": f"""
+<code>
+{code}
+</code>
+"""
+                },
+                {
+                    "role": "user",
+                    "content": f"""
+Interpreter feedback: 
+
+{output}
+
+This is not the first time you get this error, this means YOU DON'T KNOW HOW TO FIX IT, and probably never will. Please, just REMOVE the part of the code that causes it, despite it will simplify the result.
+"""
+                }
+            ]
+        else:
+            tips = """
+- if the error is like 'Workplane' object has no attribute 'xyz': DO NOT TRY TO DO IT DIFFERENTLY, JUST REMOVE WHAT YOU WERE DOING AND FORGET ABOUT IT
+- if the error is cryptic and has "<OCP." codes in it: DO NOT TRY TO DO IT DIFFERENTLY, JUST REMOVE WHAT YOU WERE DOING AND FORGET ABOUT IT
+- don't be afraid to remove stuff, but don't remove entire functions, just simplify small parts of the code
+- find different ways, don't make something complex become "simple" just because one call fails. remove the call, find another way
+"""
+            if "__name__ == \"__main__\"" in code:
+                tips += "\n- If your code contains __name__ == \"__main__\", DO NOT USE A main function or a __name__ == thing. Your export MUST BE at the end of the code, without indentation, so not inside a function."
+                tips += "To export: \n\n```\nfilename = \"render.stl\"\nresult.val().exportStl(filename)\n```"
+            if "timed out" in output:
+                tips += "\n- If the code timed out, it is likely instanciating multiple objects in a loop, remove that by simplifying the code."
+            if "No pending wires present" in output:
+                tips += "\n- If the error is `No pending wires present`, it is likely not trival: all you can do is to remove the function call causing the error and not attempt to do in any other way what you meant to do with that call."
+            if "fillet" in output or "chamfer" in output:
+                tips += '\n- If the error is regarding fillet and chamfers, make sure you selected some edges with .edges(... (e.g "|Z")) before .fillet(<radius>) or .chamfer(<radius>). Notably, you can\'t pass an edge list to .chamfer() or .fillet(), it only takes a radius. You always need to select the edges with .edges. \n```\n edges(selector: Optional[Union[str, Selector]] = None, tag: Optional[str] = None)→ T\n Select the edges of objects on the stack, optionally filtering the selection. If there are multiple objects on the stack, the edges of all objects are collected and a list of all the distinct edges is returned.\nFilters must provide a single method that filters objects: filter(objectList: Sequence[Shape])→ list[Shape]\n```'
+            if "one solid on the stack to union" in output:
+                tips += "\n- If the error is ` Workplane object must have at least one solid on the stack to union!`, make sure you don't call .union on a workplane you just selected, but instead on a workplane with an existing object within. For instance if you created object A on a workplane and object B on another workplane, don't do `result = cq.Workplane(...).union(A).union(B)` but instead `result = A.union(B)`"
+            messages_fix = messages.copy() + [
+                {
+                    "role": "assistant",
+                    "content": f"""
+<code>
+{code}
+</code>
+"""
+                },
+                {
+                    "role": "user",
+                    "content": f"""
+Interpreter feedback: 
+
+{output}
+
+Either: Fix the bug if it is incredibly trivial to do it (like if the error message explicitly tells you what to do), or
+Remove the part of the code that is buggy and adapt the rest of the code to work without it. The goal is to simplify so we can find all the errors in this code.
+
+Tips:
+
+{tips}
+"""
+                }
+            ]
+
+        response = client.chat.completions.create(
+            model=MODEL_FAST, messages=messages_fix, temperature=0.4, timeout=40
+        )
+
+        logger.trace("Retry response {}: {}", retries, response.choices[0].message.content)
+
+        try:
+            code = response.choices[0].message.content.split("<code>", 1)[1].split("</code>", 1)[0].strip()
+        except Exception as e:
+            code = response.choices[0].message.content.replace("```python", "```").split("```", 1)[1].split("```", 1)[0].strip()
+
+        program_id, output, success = execute_first_time(code)
+        if output.strip().split("\n")[-1] == last_output.strip().split("\n")[-1]:
+            logger.info("Repeated error, retrying")
+            repeat_error = True
+        else:
+            repeat_error = False
+
+        if success:
+            break
+        retries += 1
+        last_output = output
+
+    return program_id, success
