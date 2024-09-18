@@ -68,11 +68,11 @@ def execute(
     if params_dict is not None:
         # logger.trace(f"New params to be applied: \n{params_dict}")
         code = apply_params(code, params_dict)
-        logger.trace(f"Code after applying params: \n{code}")
+        # logger.trace(f"Code after applying params: \n{code}")
 
     if export_format != "stl":
         code = replace_export_function(code, export_format)
-        logger.trace(f"Code after replacing exportStl: \n{code}")
+        # logger.trace(f"Code after replacing exportStl: \n{code}")
 
     temp_script_path = program_script_path(program_id) + ".tmp"
     logger.trace(f"Writing script to be executed to {temp_script_path}")
