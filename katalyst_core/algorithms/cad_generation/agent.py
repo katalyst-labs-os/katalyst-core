@@ -40,7 +40,7 @@ class Agent:
     ) -> Optional[str]:
         random_id = str(time.time())
 
-        logger.info(
+        logger.trace(
             f"[{random_id}] Generating initial solution for: {self.initial_prompt}"
         )
 
@@ -374,7 +374,7 @@ Tips:
 
         program_id, output, success = execute_first_time(code)
         if output.strip().split("\n")[-1] == last_output.strip().split("\n")[-1]:
-            logger.info("Repeated error, retrying")
+            logger.trace("Repeated error, retrying")
             repeat_error = True
         else:
             repeat_error = False
