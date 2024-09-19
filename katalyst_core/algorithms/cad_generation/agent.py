@@ -4,7 +4,7 @@ from loguru import logger
 from katalyst_core.algorithms.cad_generation.utils import init_client
 from katalyst_core.programs.executor import execute_first_time
 
-from katalyst_core.programs.storage import program_stl_path
+from katalyst_core.programs.storage import program_script_path, program_stl_path
 from katalyst_core.programs.executor import preamble
 
 from katalyst_core.algorithms.cad_generation.examples_ragging import (
@@ -46,7 +46,19 @@ class Agent:
 
         examples = generate_examples_for_iteration_prompt(self.initial_prompt, assemblies=False, top_n=10)
         
-        program_id, success = generate_cad(examples, self.initial_prompt, depth=precision, llm_api_key=llm_api_key)
+        prompt = f"""
+# Prompt
+
+<prompt>
+{self.initial_prompt}
+</prompt>
+
+# Task
+
+Taking inspiration from the up to date syntax in the examples, code a very realistic parametric CAD model using cadquery from the above prompt
+"""
+
+        program_id, success = generate_cad(examples, prompt, depth=precision, llm_api_key=llm_api_key)
 
         if not success:
             return None
@@ -67,7 +79,7 @@ class Agent:
         )
 
         previous_code = ""
-        with open(program_stl_path(self.last_program_id), "r") as f:
+        with open(program_script_path(self.last_program_id), "r") as f:
             previous_code = f.read()
 
         prompt = f"""
@@ -77,11 +89,17 @@ Answering to the prompt:
 
 And various follow-ups, you used parametric CAD to model the following:
 
+<code>
 {previous_code}
+</code>
 
 Now you are asked with doing the following change:
 
+<request>
 {iteration}
+</request>
+
+Please EDIT the above code (don't just take inspiration) to add the requested change. Really just use it entirely and then edit.
 """
 
         program_id, success = generate_cad(examples_prompt, prompt, depth=0, llm_api_key=llm_api_key)
@@ -120,13 +138,7 @@ Examples:
 
 {examples}
 
-<prompt>
 {prompt}
-</prompt>
-
-# Task
-
-Taking inspiration from the up to date syntax in the examples, code a very realistic parametric CAD model using cadquery from the above prompt
 
 No imports can be included by you, do not write any. The following imports will be added to your code automatically:
 
@@ -134,7 +146,7 @@ No imports can be included by you, do not write any. The following imports will 
 {preamble}
 </code>
 
-Write the entire code in one text block wrapped around <code> </code> tags, without using markdown ``` and make sure the parameters are written with one `<variable> = <expression or literal>` per line (avoid dict, avoid list, avoid tuple, except if short and on one line).
+First reason spatially and geometrically and then write the entire code in one text block wrapped around <code> </code> tags, without using markdown ``` and make sure the parameters are written with one `<variable> = <expression or literal>` per line (avoid dict, avoid list, avoid tuple, except if short and on one line).
 Make also sure parameters are between the imports and the first modeling line and delimited by <parameters> </parameters> tags like in:
 
 <code>
@@ -163,6 +175,7 @@ Now think and code it:
         model=MODEL, messages=messages, temperature=0.4, timeout=40
     )
 
+    logger.trace(messages[0]["content"])
     logger.trace("Initial response: {}", response.choices[0].message.content)
     
     messages_improve = messages.copy()
