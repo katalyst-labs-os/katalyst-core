@@ -30,6 +30,7 @@ preamble = """
 import cadquery as cq
 import cadquery
 from cq_gears import *
+from airfoils import Airfoil # foil = Airfoil.NACA4('4812')
 import math
 import numpy as np
 import random
