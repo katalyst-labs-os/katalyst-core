@@ -44,8 +44,10 @@ class Agent:
             f"[{random_id}] Generating initial solution for: {self.initial_prompt}"
         )
 
-        examples = generate_examples_for_iteration_prompt(self.initial_prompt, assemblies=False, top_n=10)
-        
+        examples = generate_examples_for_iteration_prompt(
+            self.initial_prompt, assemblies=False, top_n=10
+        )
+
         prompt = f"""
 # Prompt
 
@@ -58,7 +60,20 @@ class Agent:
 Taking inspiration from the up to date syntax in the examples, code a very realistic parametric CAD model using cadquery from the above prompt
 """
 
-        program_id, success = generate_cad(examples, prompt, depth=precision, llm_api_key=llm_api_key)
+        main_model = MODEL
+        depth = precision - 1
+        if precision == 0:
+            main_model = MODEL_FAST
+            depth = 0
+
+        program_id, success = generate_cad(
+            examples,
+            prompt,
+            depth,
+            main_model,
+            second_model=MODEL_FAST,
+            llm_api_key=llm_api_key,
+        )
 
         if not success:
             return None
@@ -102,7 +117,14 @@ Now you are asked with doing the following change:
 Please EDIT the above code (don't just take inspiration) to add the requested change. Really just use it entirely and then edit.
 """
 
-        program_id, success = generate_cad(examples_prompt, prompt, depth=0, llm_api_key=llm_api_key)
+        program_id, success = generate_cad(
+            examples_prompt,
+            prompt,
+            depth=0,
+            main_model=MODEL,
+            second_model=MODEL_FAST,
+            llm_api_key=llm_api_key,
+        )
 
         if not success:
             return None
@@ -127,9 +149,16 @@ Please EDIT the above code (don't just take inspiration) to add the requested ch
         )
 
 
-def generate_cad(examples: str, prompt: str, depth: int, llm_api_key: Optional[str] = None) -> tuple[Optional[str], bool]:
+def generate_cad(
+    examples: str,
+    prompt: str,
+    depth: int,
+    main_model: str = MODEL,
+    second_model: str = MODEL_FAST,
+    llm_api_key: Optional[str] = None,
+) -> tuple[Optional[str], bool]:
     client = init_client(llm_api_key)
-    
+
     messages = [
         {
             "role": "user",
@@ -167,33 +196,46 @@ result.val().exportStl(filename) # if result is a Workplane, you must call val()
 </code>
 
 Now think and code it:
-"""
+""",
         }
     ]
 
     response = client.chat.completions.create(
-        model=MODEL, messages=messages, temperature=0.4, timeout=40
+        model=main_model, messages=messages, temperature=0.4, timeout=40
     )
 
     logger.trace(messages[0]["content"])
     logger.trace("Initial response: {}", response.choices[0].message.content)
-    
+
     messages_improve = messages.copy()
 
     try:
-        code = response.choices[0].message.content.split("<code>", 1)[1].split("</code>", 1)[0].strip()
+        code = (
+            response.choices[0]
+            .message.content.split("<code>", 1)[1]
+            .split("</code>", 1)[0]
+            .strip()
+        )
     except Exception as _:
         try:
-            code = response.choices[0].message.content.replace("```python", "```").split("```", 1)[1].split("```", 1)[0].strip()
+            code = (
+                response.choices[0]
+                .message.content.replace("```python", "```")
+                .split("```", 1)[1]
+                .split("```", 1)[0]
+                .strip()
+            )
         except Exception as _:
             code = None
 
     d = 0
-    while d < depth:        
+    while d < depth:
         messages_improve = [
             {
                 "role": "assistant",
-                "content": code if code is not None else response.choices[0].message.content,
+                "content": (
+                    code if code is not None else response.choices[0].message.content
+                ),
             },
             {
                 "role": "user",
@@ -227,24 +269,37 @@ Make also sure you export to stl in the end:
 filename = "render.stl"
 result.val().exportStl(filename) # if result is a Workplane, you must call val() before exportStl
 </code>
-"""
-            }
+""",
+            },
         ]
 
         response = client.chat.completions.create(
-            model=MODEL, messages=messages_improve, temperature=0.4, timeout=40
+            model=main_model, messages=messages_improve, temperature=0.4, timeout=40
         )
 
         try:
-            code = response.choices[0].message.content.split("<code>", 1)[1].split("</code>", 1)[0].strip()
+            code = (
+                response.choices[0]
+                .message.content.split("<code>", 1)[1]
+                .split("</code>", 1)[0]
+                .strip()
+            )
         except Exception as e:
-            code = response.choices[0].message.content.replace("```python", "```").split("```", 1)[1].split("```", 1)[0].strip()
+            code = (
+                response.choices[0]
+                .message.content.replace("```python", "```")
+                .split("```", 1)[1]
+                .split("```", 1)[0]
+                .strip()
+            )
 
         logger.trace("Precision response: {}", response.choices[0].message.content)
         d += 1
 
     resp_content = response.choices[0].message.content
-    no_parameters = "# <parameters>" not in resp_content or "# </parameters>" not in resp_content
+    no_parameters = (
+        "# <parameters>" not in resp_content or "# </parameters>" not in resp_content
+    )
     no_code = "<code>" not in resp_content or "</code>" not in resp_content
     no_export = "result.val().exportStl(filename)" not in resp_content
 
@@ -276,17 +331,22 @@ Make also sure you export to stl in the end:
 filename = "render.stl"
 result.val().exportStl(filename) # if result is a Workplane, you must call val() before exportStl
 </code>
-    """
-            }
+    """,
+            },
         ]
 
         response = client.chat.completions.create(
-            model=MODEL_FAST, messages=messages_improve, temperature=0.4, timeout=40
+            model=second_model, messages=messages_improve, temperature=0.4, timeout=40
         )
 
         logger.trace("Formatting response: {}", response.choices[0].message.content)
 
-    code = response.choices[0].message.content.split("<code>", 1)[1].split("</code>", 1)[0].strip()
+    code = (
+        response.choices[0]
+        .message.content.split("<code>", 1)[1]
+        .split("</code>", 1)[0]
+        .strip()
+    )
     program_id, output, success = execute_first_time(code)
 
     retries = 0
@@ -304,7 +364,7 @@ result.val().exportStl(filename) # if result is a Workplane, you must call val()
 <code>
 {code}
 </code>
-"""
+""",
                 },
                 {
                     "role": "user",
@@ -314,8 +374,8 @@ Interpreter feedback:
 {output}
 
 This is not the first time you get this error, this means YOU DON'T KNOW HOW TO FIX IT, and probably never will. Please, just REMOVE the part of the code that causes it, despite it will simplify the result.
-"""
-                }
+""",
+                },
             ]
         else:
             tips = """
@@ -324,9 +384,9 @@ This is not the first time you get this error, this means YOU DON'T KNOW HOW TO 
 - don't be afraid to remove stuff, but don't remove entire functions, just simplify small parts of the code
 - find different ways, don't make something complex become "simple" just because one call fails. remove the call, find another way
 """
-            if "__name__ == \"__main__\"" in code:
-                tips += "\n- If your code contains __name__ == \"__main__\", DO NOT USE A main function or a __name__ == thing. Your export MUST BE at the end of the code, without indentation, so not inside a function."
-                tips += "To export: \n\n```\nfilename = \"render.stl\"\nresult.val().exportStl(filename)\n```"
+            if '__name__ == "__main__"' in code:
+                tips += '\n- If your code contains __name__ == "__main__", DO NOT USE A main function or a __name__ == thing. Your export MUST BE at the end of the code, without indentation, so not inside a function.'
+                tips += 'To export: \n\n```\nfilename = "render.stl"\nresult.val().exportStl(filename)\n```'
             if "timed out" in output:
                 tips += "\n- If the code timed out, it is likely instanciating multiple objects in a loop, remove that by simplifying the code."
             if "No pending wires present" in output:
@@ -342,7 +402,7 @@ This is not the first time you get this error, this means YOU DON'T KNOW HOW TO 
 <code>
 {code}
 </code>
-"""
+""",
                 },
                 {
                     "role": "user",
@@ -357,20 +417,33 @@ Remove the part of the code that is buggy and adapt the rest of the code to work
 Tips:
 
 {tips}
-"""
-                }
+""",
+                },
             ]
 
         response = client.chat.completions.create(
-            model=MODEL_FAST, messages=messages_fix, temperature=0.4, timeout=40
+            model=second_model, messages=messages_fix, temperature=0.4, timeout=40
         )
 
-        logger.trace("Retry response {}: {}", retries, response.choices[0].message.content)
+        logger.trace(
+            "Retry response {}: {}", retries, response.choices[0].message.content
+        )
 
         try:
-            code = response.choices[0].message.content.split("<code>", 1)[1].split("</code>", 1)[0].strip()
+            code = (
+                response.choices[0]
+                .message.content.split("<code>", 1)[1]
+                .split("</code>", 1)[0]
+                .strip()
+            )
         except Exception as e:
-            code = response.choices[0].message.content.replace("```python", "```").split("```", 1)[1].split("```", 1)[0].strip()
+            code = (
+                response.choices[0]
+                .message.content.replace("```python", "```")
+                .split("```", 1)[1]
+                .split("```", 1)[0]
+                .strip()
+            )
 
         program_id, output, success = execute_first_time(code)
         if output.strip().split("\n")[-1] == last_output.strip().split("\n")[-1]:
