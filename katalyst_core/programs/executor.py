@@ -145,23 +145,17 @@ def execute_first_time(script: str) -> tuple[Optional[str], str, bool]:
 
 
 def set_tolerance(code: str, tolerance=5) -> str:
-    # TODO: Make it work with cadquery assemblies
-    # TODO: Make it work with build123d
     return code.replace(
         ".exportSTL(filename)", f".exportSTL(filename, tolerance={tolerance})"
     )
 
 
 def fix_and_replace_filename(code: str, by: str) -> str:
-    # TODO: Make it work with cadquery assemblies
-    # TODO: Make it work with build123d
-
     lines = code.split("\n")
     modified_lines = []
     last_assignment = None
     replaced = False
 
-    # First pass: look for <myvar> = "<myname>.stl"
     for line in lines:
         stripped_line = line.strip()
         var_name = None
@@ -237,32 +231,21 @@ def fix_and_replace_filename(code: str, by: str) -> str:
 
 
 def replace_export_function(script, new_extension):
-    # TODO: Make it work with cadquery assemblies
-    # TODO: Make it work with build123d
-
-    # Ensure the new extension starts with a dot
     if not new_extension.startswith("."):
         new_extension = "." + new_extension
 
-    # Regular expression to find the exportStl line
     export_stl_pattern = re.compile(r"(\w+)\.val\(\)\.exportStl\((\s*\w+\s*)")
 
-    # Split the script into lines
     lines = script.split("\n")
 
-    # Iterate through each line and replace the matched pattern
     for i, line in enumerate(lines):
         match = export_stl_pattern.search(line)
         if match:
-            # Construct the replacement line
             new_line = f"cq.exporters.export({match.group(1)}, {match.group(2)})"
-            # Replace the line in the list
             lines[i] = new_line
 
-    # Join the lines back into a single script
     script = "\n".join(lines)
 
-    # Regular expression to find the filename line and change the extension
     filename_pattern = re.compile(r'(filename\s*=\s*[\'"])(.*?)(\.stl)([\'"])')
     script = filename_pattern.sub(rf"\1\2{new_extension}\4", script)
 
