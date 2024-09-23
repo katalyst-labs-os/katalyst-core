@@ -16,6 +16,16 @@ pip install -r requirements-dev.txt # if for development
 pip install -e .
 ```
 
+Download [the latest dataset](https://api.katalyst-labs.com/dataset/download) and put it under `storage/dataset` as to have:
+
+```
+- storage/dataset/
+    - dataset.csv
+    - steps.csv
+    - files/
+        - ...
+```
+
 ## Usage example
 
 Via the `run_agent` script:
