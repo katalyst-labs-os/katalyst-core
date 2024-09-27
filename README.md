@@ -63,3 +63,13 @@ while True:
 ```
 
 For more examples, see the [examples directory](./examples/).
+
+## Goals
+
+- Grow our Cadquery dataset to make the approach more effective (we know we can scale the quality of the approach with more data via RAG or fine-tuning)
+- Update with new LLMs, if useful and as cheap as before
+- Make prompting increasingly simpler/cheaper if performance can be conserved
+- As RAG doesn't help much with Build123d, grow a large Build123d dataset (at least 500 examples) to fine-tune for the community one day and finally not be bad with it
+- Add small changes to the generation logic that allow better UX on the KATALYST app (Node-based editing? Light UI based editing? Let us know what you'd like!)
+
+To help us reach our goals, please join our community on [Discord](https://discord.gg/8BuBk8yuvw) or open issues.
