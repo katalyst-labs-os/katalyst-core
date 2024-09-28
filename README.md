@@ -4,6 +4,8 @@ The open-source core of KATALYST. It comprises all the algorithms needed to gene
 
 It is mostly powered by the Cadquery programmatic CAD Python library and by Openrouter's LLMs API endpoints. There is also some RAGging going on with the `sentence-transformers` Python library.
 
+We are looking for contributors to help us grow our community's open dataset. If you'd like to contribute Cadquery of Build123d code, please [do so here](https://discord.gg/8BuBk8yuvw).
+
 ## Installation
 
 Conda is mainly use to isolate the environment and dictate the python version. For the dependencies, we use pip.
