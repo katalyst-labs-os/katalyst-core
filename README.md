@@ -10,8 +10,6 @@ The simplest way to use KATALYST is through the [web UI](https://katalyst-labs.c
 
 ## Installation
 
-Conda is mainly use to isolate the environment and dictate the python version. For the dependencies, we use pip.
-
 ```bash
 conda env create -f environment.yml
 conda activate katalyst-core
