@@ -6,6 +6,8 @@ It is mostly powered by the Cadquery programmatic CAD Python library and by Open
 
 We are looking for contributors to help us grow our community's open dataset. If you'd like to contribute Cadquery or Build123d code, please [do so here](https://discord.gg/8BuBk8yuvw).
 
+The simplest way to use KATALYST is through the [web UI](https://katalyst-labs.com).
+
 ## Installation
 
 Conda is mainly use to isolate the environment and dictate the python version. For the dependencies, we use pip.
